@@ -4,7 +4,7 @@ import pyautogui
 
 screen_w, screen_h = pyautogui.size()
 dead_image = Image.open("dead_screenshot.png")
-isdead_region = (screen_w - 200, screen_h - 70, 200, 30)
+isdead_region = (screen_w / 2 - 20, screen_h / 3 - 20, 40, 40)
 
 for i in range(1) :
     #game_region = (50, 50, screen_w - 100, screen_h - 100)
