@@ -11,7 +11,7 @@ for i in range(1) :
     #capture = pyautogui.screenshot(region = game_region)
     
     isdead = pyautogui.screenshot(region = isdead_region)
-    isdead.save("dead_screenshot.png")
+    #isdead.save("dead_screenshot.png")
     bbox = ImageChops.difference(dead_image, isdead).getbbox()
     if bbox == None :
         print("is dead")

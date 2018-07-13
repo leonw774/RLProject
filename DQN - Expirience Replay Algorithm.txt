@@ -35,7 +35,7 @@ for time = 1 to T
 
   不那麼準確的_之後可得總獎勵 := Q(隨機紀錄->舊狀態, 隨機紀錄->動作)
   
-  獎勵網路.train(更準確的, 不那麼準確的) #optimizer = sgd, loss = mse
+  獎勵網路.train(更準確的, 不那麼準確的) #optimizer = RMSProp, loss = mse
 }
 
 因為我們agar.io的目標是活愈久愈好，所以「衰減率」這個東西應該要大於1，存活愈晚獎勵愈高？

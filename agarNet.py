@@ -1,58 +1,67 @@
 import numpy as np
-from PIL import ImageChops, Image
 import pyautogui
 import time
 import math
 import random
 import datetime
 
+from PIL import ImageChops, Image
 from keras import optimizers
 from keras import backend as K
 from keras.models import Model
 from keras.layers import Activation, Concatenate, Conv2D, Conv3D, Dense, Dropout, Flatten, SimpleRNN, Input, MaxPooling2D, MaxPooling3D
 
-screen_w, screen_h = pyautogui.size()
-dead_image = Image.open("dead_screenshot.png")
+# SCREENSHOTS SETTING
+SCREEN_W, SCREEN_H = pyautogui.size()
+DEAD_IMAGE = Image.open("dead_screenshot.png")
+GAME_REGION = (60, 100, SCREEN_W - 120, SCREEN_H - 200)
+ISDEAD_REGION = (SCREEN_W / 2 - 20, SCREEN_H / 3 - 20, 40, 40)
+SCRSHOTS_NUM = 1
+SCRSHOTS_W = 128
+SCRSHOTS_H = 128
+Q_INPUT_SHAPE = (SCRSHOTS_W, SCRSHOTS_H, SCRSHOTS_NUM)
 
-scrshots_num = 2
-scrshots_w = 128
-scrshots_h = 128
+# Q FUNCTION SETTING
+EPOCHES = 1
+LIMIT_TIME = 10 # in second
 
-net_input_shape = (scrshots_w, scrshots_h, 3 * scrshots_num)
+# REWARD SETTING
+GAMMA = 1 / math.exp(1)
 
-game_region = (60, 100, screen_w - 120, screen_h - 200)
-isdead_region = (screen_w / 2 - 20, screen_h / 3 - 20, 40, 40)
+# ACTION SETTING
+MOUSE_ANGLE_DEVISION = 16
+MOUSE_ACTION_NUM = MOUSE_ANGLE_DEVISION + 1
+#{angle_0, angle_1, ..., angle_n, no_angle}
+KEYBOARD_ACTION_NUM = 0
+#{key_0, key_1, ..., key_n}
 
-angle_devision = 24
-action_num = angle_devision + 1
-
-def isdead() :
-    isdead = pyautogui.screenshot(region = isdead_region)
-    bbox = ImageChops.difference(dead_image, isdead).getbbox()
+def is_dead() :
+    isdead = pyautogui.screenshot(region = ISDEAD_REGION)
+    bbox = ImageChops.difference(DEAD_IMAGE, isdead).getbbox()
     return (bbox == None)
     
-def get_screenshots(n, size) :
-    squence_scrshot = np.zeros((1, size[0], size[1], 3 * n))
-    for i in range(n) :
-        scrshot = (pyautogui.screenshot(region = game_region)).resize(size, resample = 0)
+def get_screenshots() :
+    squence_scrshot = np.zeros((1, SCRSHOTS_W, SCRSHOTS_H, SCRSHOTS_NUM))
+    for i in range(SCRSHOTS_NUM) :
+        scrshot = (pyautogui.screenshot(region = GAME_REGION)).convert('L').resize((SCRSHOTS_W, SCRSHOTS_H), resample = 0)
         #scrshot.save("test" + str(i) + ".png")
         scrshot = np.asarray(scrshot) / 255.5
-        squence_scrshot[:, :, :, 3 * i : 3 * (i+1)] = scrshot
+        squence_scrshot[:, :, :, i] = scrshot
         time.sleep(0.1)
     return squence_scrshot
     
 def do_control(control_id) : 
-    if (control_id >= angle_devision) :
-        pyautogui.moveTo(screen_w / 2, screen_h / 2)
+    if (control_id >= MOUSE_ANGLE_DEVISION) :
+        pyautogui.moveTo(SCREEN_W / 2, SCREEN_H / 2)
     else :
-        angle = 2 * math.pi * control_id / angle_devision
+        angle = 2 * math.pi * control_id / MOUSE_ANGLE_DEVISION
         offset_x = math.cos(angle) * 100
         offset_y = math.sin(angle) * 100
-        pyautogui.moveTo(offset_x + screen_w / 2, offset_y + screen_h / 2)
+        pyautogui.moveTo(offset_x + SCREEN_W / 2, offset_y + SCREEN_H / 2)
     return
 
-# guess how many score it will make
-def agarNet(scrshot_size, action_size) :
+# Q-network: guess how many score it will make
+def QNet(scrshot_size, action_size) :
     input_image = Input(scrshot_size) # image
     input_action = Input((action_size,)) # one-hot
     x = Conv2D(4, (3, 3), padding = "valid", activation = "relu", data_format = "channels_last")(input_image)
@@ -66,34 +75,77 @@ def agarNet(scrshot_size, action_size) :
     model.summary()
     return model
 
-AgarNet = agarNet(net_input_shape, action_num)
-AgarNet.compile(loss = "mse", optimizer = "sgd")
+# Q and Q_target
+QNet = QNet(Q_INPUT_SHAPE, MOUSE_ACTION_NUM)
+QNet.compile(loss = "mse", optimizer = "sgd")
+
+# Q_target = QNet(Q_INPUT_SHAPE, MOUSE_ACTION_NUM)
+# Q_target.set_weights(model.get_weights())
+
+'''
+We will train Q, at time t, as:
+    y_pred = Q([state_t, a_t])
+    y_true = r_t + gamma * max(Q_target([state_t, for a in A]))
+update Q's weight in mse
+after a number of steps, copy Q to Q_target.
+'''
+
+# Action Set
+actionSet = []
+for i in range(MOUSE_ACTION_NUM) :
+    action_onehot = np.zeros((1, MOUSE_ACTION_NUM))
+    action_onehot[0, i] = 1
+    actionSet.append(action_onehot)
+
+# States Queue
+class StateQueue() :
+    '''
+    NOT DONE YET
+    StateQueue is a list of step tuple: [ (scrshots, action, reward, next_scrshots), ... ]
+    '''
+    def __init__(self) :
+        self.stepList = []
     
+    def addStep(self, scrshots, action, reward, next_scrshots) :
+        if (step.size == 3) :
+            if (scrshots == (1, SCRSHOTS_W, SCRSHOTS_H, SCRSHOTS_NUM) # scrshots
+                and action == (1, MOUSE_ACTION_NUM) # action
+                and type(reward) == float # reward
+                and next_scrshots.shape == (1, SCRSHOTS_W, SCRSHOTS_H, SCRSHOTS_NUM) # next_scrshots
+               ):
+                stepList.append((scrshots, action, reward, next_scrshots))
+                return
+        print("error in step tuple")
+    
+    def getStep(self, stepNum) :
+    # step counted from zero.
+        try :
+            outStep = list(stepList[stepNum])
+            return outStep
+        except :
+            print("stepNum out of size")
+
 # Countdown
 for i in range(3) :
     print(3 - i)
     time.sleep(1.0)
 
-ActionSet = []
-for i in range(action_num) :
-    action_onehot = np.zeros((1, action_num))
-    action_onehot[0, i] = 1
-    ActionSet.append(action_onehot)
-print(ActionSet[3].shape)
-
-StateQueue = []
-
 start_time = datetime.datetime.now()
-while(True) :
-    squence_srcshot = get_screenshots(scrshots_num, (scrshots_w, scrshots_h))
-    max_pred_score = 0
-    action = 0
-    for i in range(action_num) :
-        pred_score = AgarNet.predict([squence_srcshot, ActionSet[i]])
-        if (max_pred_score > pred_score) : action = i
-    print(action)
-    do_control(action)
-    if (isdead()) :
-        print("isdead")
-        break
-    if ((datetime.datetime.now() - start_time).total_seconds() > 30) : break
+
+for e in range(EPOCHES) :
+    prev_squence_srcshot = get_screenshots()
+    
+    while(True) :
+        
+        cur_squence_srcshot = get_screenshots()
+        max_pred_score = 0
+        action = 0
+        for i in range(MOUSE_ACTION_NUM) :
+            pred_score = QNet.predict([cur_squence_srcshot, actionSet[i]])
+            if (max_pred_score > pred_score) : action = i
+        print(action)
+        do_control(action)
+        if (is_dead()) :
+            print("isdead")
+            break
+        if ((datetime.datetime.now() - start_time).total_seconds() > LIMIT_TIME) : break
