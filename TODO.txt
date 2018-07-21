@@ -1,6 +1,6 @@
-- 寫出算獎勵的function
+- 做出state queue，可以正常存東西進去
 
-- 讓state queue正常運作
+- 寫出算獎勵的function
 
 - 把state queue轉成可以餵給Q的input
     (For the experiments in this paper, the function from algorithm 1 applies this preprocessing to the last 4 frames of a history and stacks them to produce the input to the Q-function.)
