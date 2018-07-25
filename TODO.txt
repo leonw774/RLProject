@@ -1,10 +1,6 @@
-- °µ¥Xstate queue¡A¥i¥H¥¿±`¦sªF¦è¶i¥h
+ï»¿
+- å¯«å‡ºç®—çå‹µçš„function
 
-- ¼g¥Xºâ¼úÀyªºfunction
+- å°‡Qå»ºæˆè«–æ–‡è£¡çš„æ¶æ§‹è©¦ä¸€æ¬¡
 
-- §âstate queueÂà¦¨¥i¥HÁıµ¹Qªºinput
-    (For the experiments in this paper, the function from algorithm 1 applies this preprocessing to the last 4 frames of a history and stacks them to produce the input to the Q-function.)
-
-- Q¥i¥Hbatch training
-
-- ±NQ«Ø¦¨½×¤å¸Ìªº¬[ºc¸Õ¤@¦¸
+- Qæˆ–è¨±å¯ä»¥ç”¨LSTM Convolution!?!?
