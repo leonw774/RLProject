@@ -1,4 +1,3 @@
-import numpy as np
 from setting import *
 
 class StateQueue() :
@@ -19,10 +18,10 @@ class StateQueue() :
         if (scrshot.shape != SCRSHOT_SHAPE) or (nxt_scrshot.shape != SCRSHOT_SHAPE) :
             print("scrshot shape no good: Received", scrshot.shape, " but ", SCRSHOT_SHAPE, " is expected.")
             return
-        self.scrshotList.append(scrshot[0])
+        self.scrshotList.append(scrshot)
         self.actionList.append(action[0])
         self.rewardList.append(reward)
-        self.nxtScrshotsList.append(nxt_scrshot[0])
+        self.nxtScrshotsList.append(nxt_scrshot)
         
     def getLength(self) :
         return len(self.scrshotList)
@@ -55,8 +54,8 @@ class StateQueue() :
             raise("Out of Boundary Error")
                       
     def calReward(self, pre_scrshot, cur_scrshot) :
-        pre_scrshot = pre_scrshot[0]
-        cur_scrshot = cur_scrshot[0]
+        pre_scrshot = pre_scrshot
+        cur_scrshot = cur_scrshot
         if len(self.scrshotList) <= 2 : return 0
         
         cur_diff = 2147483648
@@ -64,32 +63,36 @@ class StateQueue() :
         pre_diff = 2147483648
         pre_steps_before = -1
         
-        for step, scrshot_seq in enumerate(self.scrshotList) :
-            cur_d = np.sum(np.absolute(np.subtract(scrshot_seq, cur_scrshot)))
-            pre_d = np.sum(np.absolute(np.subtract(scrshot_seq, pre_scrshot)))
-            if cur_d < cur_diff :
-                cur_diff = cur_d
-                cur_steps_before = len(self.scrshotList) - step
-            if pre_d < cur_diff :
-                pre_diff = cur_d
-                pre_steps_before = len(self.scrshotList) - step
-        #print("cur_diff", cur_diff)
+        OH_NO_YOURE_NOT_MOVING = (np.sum(np.absolute(np.subtract(pre_scrshot, cur_scrshot))) < (GOOD_REWARD // 2))
         
-        OH_NO_YOURE_NOT_MOVING = cur_steps_before < 3 and pre_steps_before < 3
-        FIND_NEW_ENV = cur_diff > GOOD_REWARD_THRESHOLD
+        if not OH_NO_YOURE_NOT_MOVING :
+        
+            for step, scrshot_seq in enumerate(self.scrshotList) :
+                cur_d = np.sum(np.absolute(np.subtract(scrshot_seq, cur_scrshot)))
+                pre_d = np.sum(np.absolute(np.subtract(scrshot_seq, pre_scrshot)))
+                if cur_d < cur_diff :
+                    cur_diff = cur_d
+                    cur_steps_before = len(self.scrshotList) - step
+                if pre_d < cur_diff :
+                    pre_diff = cur_d
+                    pre_steps_before = len(self.scrshotList) - step
+            #print("cur_diff", cur_diff)
+            
+            OH_NO_YOURE_NOT_MOVING = cur_steps_before < 3 and pre_steps_before < 3
         
         diff_score = GOOD_REWARD * cur_diff / GOOD_REWARD_THRESHOLD // 2
         if diff_score > GOOD_REWARD : diff_score = GOOD_REWARD
         elif diff_score < 0 : diff_score = 0
         #print("diff_score", diff_score)
         
-        if FIND_NEW_ENV or cur_steps_before == -1 :
+        if cur_diff > GOOD_REWARD_THRESHOLD and cur_steps_before == -1:
             #print("Find new env")
             return GOOD_REWARD
         else :
             if not OH_NO_YOURE_NOT_MOVING :
                 #print("is moving")
-                return diff_score - BAD_DECLINE_RATE * cur_steps_before
+                bad = diff_score - BAD_DECLINE_RATE * cur_steps_before
+                return bad if bad > BAD_REWARD_MIN else BAD_REWARD_MIN
             else :
                 return BAD_REWARD_MAX
             '''

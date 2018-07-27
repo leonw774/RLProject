@@ -106,3 +106,4 @@ venv.bak/
 # keras model file
 *.h5
 *.model
+*.png

@@ -20,7 +20,7 @@ for i in range(TEST_STEPS) :
     if random.random() < MIN_EPSILON :
         cur_action = random.randrange(TOTAL_ACTION_NUM)
     else :
-        q_values = [Q_target.predict([cur_scrshot, A[i]])[0,0] for i in range(TOTAL_ACTION_NUM)]
+        q_values = [Q_target.predict([add_noise(cur_scrshot), A[i]])[0,0] for i in range(TOTAL_ACTION_NUM)]
         #print(q_values)
         cur_action = np.argmax(q_values)
     do_control(cur_action)

@@ -5,7 +5,6 @@ from PIL import Image
 
 from time import sleep
 from win32 import win32gui
-from keras import optimizers
 from directinputs import Keys
 directInput = Keys()
 
@@ -16,24 +15,29 @@ def get_screen_rect(title = None):
             raise Exception('window title not found')
         #get the bounding box of the window
         x1, y1, x2, y2 = win32gui.GetWindowRect(gamewin)
-        y1 += 80 # i want small region
-        y2 -= 80
-        x1 += 60
-        x2 -= 60
+        y1 += 100 # i want smaller region
+        y2 -= 100
+        x1 += 80
+        x2 -= 80
         return x1, y1, (x2 - x1 + 1), (y2 - y1 + 1)
     else :
         raise Exception('no title was given')
 
 def get_screenshot() :
     sleep(SCRSHOT_INTV_TIME)
-    squence_scrshot = np.zeros(SCRSHOT_SHAPE)
+    array_scrshot = np.zeros(SCRSHOT_SHAPE)
     if COLOR == 1 :
-        scrshot = (screenshot(region = GAME_REGION)).convert('L').resize((SCRSHOT_W, SCRSHOT_H), resample = 0)
+        scrshot = (screenshot(region = GAME_REGION)).convert('L').resize((SCRSHOT_W, SCRSHOT_H), resample = Image.NEAREST)
     elif COLOR == 3 :
-        scrshot = (screenshot(region = GAME_REGION)).resize((SCRSHOT_W, SCRSHOT_H), resample = 0)
-    scrshot = np.array(scrshot) / 255.5
-    squence_scrshot[0, :, :] = scrshot
-    return squence_scrshot
+        scrshot = (screenshot(region = GAME_REGION)).convert('RGB').resize((SCRSHOT_W, SCRSHOT_H), resample = Image.NEAREST)
+    array_scrshot[0] = np.array(scrshot) / 255.5
+    return array_scrshot
+    
+def add_noise(noisy_scrshot) :
+    noisy_scrshot += np.random.uniform(low = -0.01, high = 0.01, size = SCRSHOT_SHAPE)
+    noisy_scrshot[noisy_scrshot > 1.0] = 1.0
+    noisy_scrshot[noisy_scrshot < 0.0] = 0.0
+    return noisy_scrshot
         
 GAME_REGION = get_screen_rect("Getting Over It")
     
@@ -42,15 +46,14 @@ SCRSHOT_W = 128
 SCRSHOT_H = 72
 COLOR = 3
 SCRSHOT_SHAPE = (1, SCRSHOT_H, SCRSHOT_W, COLOR)
-SCRSHOT_INTV_TIME = 0.004
+SCRSHOT_INTV_TIME = 0.006
 
 # Q NET SETTING
 Q_INPUT_SHAPE = (SCRSHOT_H, SCRSHOT_W, COLOR)
-optmz = optimizers.RMSprop(lr = 0.001)
 
 # REWARD SETTING
 GAMMA = 0.1 # 1 / exp(1)
-GOOD_REWARD_THRESHOLD = int(SCRSHOT_H * SCRSHOT_W * COLOR * 0.05)
+GOOD_REWARD_THRESHOLD = int(SCRSHOT_H * SCRSHOT_W * COLOR * 0.06)
 GOOD_REWARD = 10.0
 BAD_REWARD_MAX = -0.0
 BAD_DECLINE_RATE = 0.01 # per step
@@ -75,15 +78,15 @@ A = ActionSet()
 STATEQ_LENGTH_MAX = 1600
 
 # TRAINING SETTING
-EPSILON = 0.8
+EPSILON = 0.87
 MIN_EPSILON = 0.2
-EPSILON_DECAY = 0.9
-EPOCHES = 10
+EPSILON_DECAY = 0.975
+EPOCHES = 20
 STEP_PER_EPOCH = 1000
 STEP_PER_ASSIGN_TARGET = 200
-STEP_PER_TRAIN = 10
+STEP_PER_TRAIN = 4
 TRAIN_THRESHOLD = 100
-BATCH_SIZE = 8
+BATCH_SIZE = 16
 TEST_STEPS = 200
 
 def do_control(id) : 
