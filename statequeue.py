@@ -18,10 +18,10 @@ class StateQueue() :
         if (scrshot.shape != SCRSHOT_SHAPE) or (nxt_scrshot.shape != SCRSHOT_SHAPE) :
             print("scrshot shape no good: Received", scrshot.shape, " but ", SCRSHOT_SHAPE, " is expected.")
             return
-        self.scrshotList.append(scrshot)
+        self.scrshotList.append(scrshot[0])
         self.actionList.append(action[0])
         self.rewardList.append(reward)
-        self.nxtScrshotsList.append(nxt_scrshot)
+        self.nxtScrshotsList.append(nxt_scrshot[0])
         
     def getLength(self) :
         return len(self.scrshotList)
@@ -54,8 +54,8 @@ class StateQueue() :
             raise("Out of Boundary Error")
                       
     def calReward(self, pre_scrshot, cur_scrshot) :
-        pre_scrshot = pre_scrshot
-        cur_scrshot = cur_scrshot
+        pre_scrshot = pre_scrshot[0]
+        cur_scrshot = cur_scrshot[0]
         if len(self.scrshotList) <= 2 : return 0
         
         cur_diff = 2147483648
@@ -85,7 +85,7 @@ class StateQueue() :
         elif diff_score < 0 : diff_score = 0
         #print("diff_score", diff_score)
         
-        if cur_diff > GOOD_REWARD_THRESHOLD and cur_steps_before == -1:
+        if cur_diff > GOOD_REWARD_THRESHOLD or cur_steps_before == -1 :
             #print("Find new env")
             return GOOD_REWARD
         else :

@@ -62,23 +62,25 @@ for e in range(EPOCHES) :
         and n % STEP_PER_TRAIN == 0) :
             # Experience Replay
             r = random.randint(BATCH_SIZE, stateQueue.getLength())
-            inputs_scrshot, inputs_action, reward, nxt_scrshot = stateQueue.getStepsInArray(r - BATCH_SIZE, r)
-            next_reward = np.zeros((BATCH_SIZE, 1))
+            input_scrshots, input_actions, rewards, train_nxt_scrshots = stateQueue.getStepsInArray(r - BATCH_SIZE, r)
+            nxt_rewards = np.zeros((BATCH_SIZE, 1))
             
             for j in range(BATCH_SIZE) :
-                next_reward[j] = max([Q_target.predict([add_noise(nxt_scrshot), A[a]]) for a in range(TOTAL_ACTION_NUM)])
-            train_targets = np.add(np.reshape(reward, (BATCH_SIZE, 1)), np.multiply(GAMMA, next_reward))
+                nxt_rewards[j] = max([Q_target.predict([add_noise(np.reshape(train_nxt_scrshots[j], SCRSHOT_SHAPE)), A[a]]) for a in range(TOTAL_ACTION_NUM)])
+                
+            train_targets = np.add(np.reshape(rewards, (BATCH_SIZE, 1)), np.multiply(GAMMA, nxt_rewards))
             #print("train_targets:\n", train_targets.tolist())
             
-            loss = Q.train_on_batch([inputs_scrshot, inputs_action], train_targets)
-            print("loss: ", loss)
+            loss = Q.train_on_batch([input_scrshots, input_actions], train_targets)
+            #print("loss: ", loss)
             
         if n % STEP_PER_ASSIGN_TARGET == 0 and n != 0 :
+            print("assign Qtarget")
             Q_target.set_weights(Q.get_weights())
             Q_target.save_weights("Q_target_weight.h5")
             
         # end for(STEP_PER_EPOCH)  
-    
+    print("end epoch", e)
     del stateQueue
 
     # Restart Game...

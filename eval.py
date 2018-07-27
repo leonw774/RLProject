@@ -12,7 +12,7 @@ Q_target.load_weights("Q_target_weight.h5")
 # Evaluate
 print("Evaluate")
 # click "NEW GAME"
-click(GAME_REGION[0] + 850, GAME_REGION[1] + 290)
+click(GAME_REGION[0] + 750, GAME_REGION[1] + 200)
 sleep(7) # wait it loading...
 stateQueue = StateQueue()
 for i in range(TEST_STEPS) :
