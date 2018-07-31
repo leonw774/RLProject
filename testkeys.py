@@ -8,14 +8,14 @@ import datetime
 from directkeys import Keys
 directKeys = Keys()
 
-MOUSE_ANGLE_DEVISION = 36
+mouse_angle_devision = 36
 
 time.sleep(3.0)
 
 for n in range(120) :
-    control_id = random.randint(0, MOUSE_ANGLE_DEVISION + 1)
-    if (control_id < MOUSE_ANGLE_DEVISION) :
-        angle = 2 * math.pi * control_id / MOUSE_ANGLE_DEVISION
+    control_id = random.randint(0, mouse_angle_devision + 1)
+    if (control_id < mouse_angle_devision) :
+        angle = 2 * math.pi * control_id / mouse_angle_devision
         offset_x = math.ceil(math.cos(angle) * 12)
         offset_y = math.ceil(math.sin(angle) * 12)
         

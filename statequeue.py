@@ -1,4 +1,5 @@
-from setting import *
+import numpy as np
+from setting import TrainingSetting as set
 
 class StateQueue() :
 
@@ -9,14 +10,14 @@ class StateQueue() :
         self.nxtScrshotsList = []
     
     def addStep(self, scrshot, action, reward, nxt_scrshot) :
-        if len(self.scrshotList) == STATEQ_LENGTH_MAX :
+        if len(self.scrshotList) == set.statequeue_length_max :
             self.scrshotList.pop(0)
             self.actionList.pop(0)
             self.rewardList.pop(0)
             self.nxtScrshotsList.pop(0)
             
-        if (scrshot.shape != SCRSHOT_SHAPE) or (nxt_scrshot.shape != SCRSHOT_SHAPE) :
-            print("scrshot shape no good: Received", scrshot.shape, " but ", SCRSHOT_SHAPE, " is expected.")
+        if (scrshot.shape != set.scrshot_shape) or (nxt_scrshot.shape != set.scrshot_shape) :
+            print("scrshot shape no good: Received", scrshot.shape, " but ", set.scrshot_shape, " is expected.")
             return
         self.scrshotList.append(scrshot[0])
         self.actionList.append(action[0])
@@ -63,10 +64,9 @@ class StateQueue() :
         pre_diff = 2147483648
         pre_steps_before = -1
         
-        OH_NO_YOURE_NOT_MOVING = (np.sum(np.absolute(np.subtract(pre_scrshot, cur_scrshot))) < (GOOD_REWARD // 2))
+        OH_NO_YOURE_NOT_MOVING = (np.sum(np.absolute(np.subtract(pre_scrshot, cur_scrshot))) < (set.good_r // 2))
         
         if not OH_NO_YOURE_NOT_MOVING :
-        
             for step, scrshot_seq in enumerate(self.scrshotList) :
                 cur_d = np.sum(np.absolute(np.subtract(scrshot_seq, cur_scrshot)))
                 pre_d = np.sum(np.absolute(np.subtract(scrshot_seq, pre_scrshot)))
@@ -77,27 +77,26 @@ class StateQueue() :
                     pre_diff = cur_d
                     pre_steps_before = len(self.scrshotList) - step
             #print("cur_diff", cur_diff)
-            
             OH_NO_YOURE_NOT_MOVING = cur_steps_before < 3 and pre_steps_before < 3
         
-        diff_score = GOOD_REWARD * cur_diff / GOOD_REWARD_THRESHOLD // 2
-        if diff_score > GOOD_REWARD : diff_score = GOOD_REWARD
+        diff_score = set.good_r * cur_diff / set.good_r_thrshld // 2
+        if diff_score > set.good_r : diff_score = set.good_r
         elif diff_score < 0 : diff_score = 0
         #print("diff_score", diff_score)
         
-        if cur_diff > GOOD_REWARD_THRESHOLD or cur_steps_before == -1 :
+        if cur_diff > set.good_r_thrshld or cur_steps_before == -1 :
             #print("Find new env")
-            return GOOD_REWARD
+            return set.good_r
         else :
             if not OH_NO_YOURE_NOT_MOVING :
                 #print("is moving")
-                bad = diff_score - BAD_DECLINE_RATE * cur_steps_before
-                return bad if bad > BAD_REWARD_MIN else BAD_REWARD_MIN
+                bad = diff_score - set.bad_decline_rate * cur_steps_before
+                return bad if bad > set.bad_r_min else set.bad_r_min
             else :
-                return BAD_REWARD_MAX
+                return set.bad_r_max
             '''
                 #print("YOU SCREW")
-                bad = BAD_REWARD_MAX - BAD_DECLINE_RATE * cur_steps_before
-                return bad if bad > BAD_REWARD_MIN else BAD_REWARD_MIN
+                bad = bad_r_max - bad_decline_rate * cur_steps_before
+                return bad if bad > bad_r_min else bad_r_min
             '''
     
