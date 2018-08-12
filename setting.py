@@ -34,34 +34,36 @@ class TrainingSetting() :
 
     # Q NET SETTING
     model_input_shape = (scrshot_h, scrshot_w, color_size)
-    model_optimizer = optimizers.RMSprop(lr = 0.0025)
+    model_optimizer = optimizers.RMSprop(lr = 0.0002)
 
     # REWARD SETTING
-    gamma = 0.1 # 1 / exp(1)
-    good_r_thrshld = int(scrshot_h * scrshot_w * color_size * 0.06)
+    gamma = 0.9 # 1 / exp(1)
+    good_r_thrshld = int(scrshot_h * scrshot_w * color_size * 0.075)
     good_r = 10.0
     bad_r_max = -0.0
-    bad_decline_rate = 0.01 # per step
+    bad_decline_rate = 0.1 # per step
     bad_r_min = -10.0
 
     # ACTION SETTING
     mouse_angle_devision = 16
     actions_num = mouse_angle_devision * 2
     # {slow moving, fast moving}
-    do_control_pause = 0.0
+    do_control_pause = 0.003
 
     # STATE QUEUE SETTING    
-    statequeue_length_max = 800
+    statequeue_length_max = 1000
 
     # TRAINING SETTING
-    epsilon = 0.9
-    eps_min = 0.2
+    epsilon = 1.0
+    eps_min = 0.1
     eps_decay = 0.99
     epoches = 100
-    steps_epoch = 400 # 1000 is too much
-    steps_update_target = 100
-    train_thrshld = 40
+    steps_epoch = 1000
+    train_thrshld = 80
     steps_train = 8
     batch_size = 16
-    test_steps = 100
+    steps_update_target = 100
+    
+    eps_test = 0.01
+    steps_test = 400
     

@@ -19,10 +19,10 @@ class StateQueue() :
         if (scrshot.shape != set.scrshot_shape) or (nxt_scrshot.shape != set.scrshot_shape) :
             print("scrshot shape no good: Received", scrshot.shape, " but ", set.scrshot_shape, " is expected.")
             return
-        self.scrshotList.append(scrshot[0])
-        self.actionList.append(action[0])
-        self.rewardList.append(reward)
-        self.nxtScrshotsList.append(nxt_scrshot[0])
+        self.scrshotList.append(scrshot[0]) # np array
+        self.actionList.append(action) # int
+        self.rewardList.append(reward) # float
+        self.nxtScrshotsList.append(nxt_scrshot[0]) # np array
         
     def getLength(self) :
         return len(self.scrshotList)
@@ -60,43 +60,44 @@ class StateQueue() :
         if len(self.scrshotList) <= 2 : return 0
         
         cur_diff = 2147483648
-        cur_steps_before = -1
+        cur_distance = -1
         pre_diff = 2147483648
-        pre_steps_before = -1
+        pre_distance = -1
         
         OH_NO_YOURE_NOT_MOVING = (np.sum(np.absolute(np.subtract(pre_scrshot, cur_scrshot))) < (set.good_r // 2))
         
         if not OH_NO_YOURE_NOT_MOVING :
+            # find the screenshot that is most similar: smallest diff
             for step, scrshot_seq in enumerate(self.scrshotList) :
                 cur_d = np.sum(np.absolute(np.subtract(scrshot_seq, cur_scrshot)))
                 pre_d = np.sum(np.absolute(np.subtract(scrshot_seq, pre_scrshot)))
                 if cur_d < cur_diff :
                     cur_diff = cur_d
-                    cur_steps_before = len(self.scrshotList) - step
+                    cur_distance = len(self.scrshotList) - step
                 if pre_d < cur_diff :
                     pre_diff = cur_d
-                    pre_steps_before = len(self.scrshotList) - step
-            #print("cur_diff", cur_diff)
-            OH_NO_YOURE_NOT_MOVING = cur_steps_before < 3 and pre_steps_before < 3
+                    pre_distance = len(self.scrshotList) - step
+            #print("cur_diff", cur_diff, "pre_diff", pre_diff)
+            OH_NO_YOURE_NOT_MOVING = cur_distance < 3 and pre_distance < 3
         
-        diff_score = set.good_r * cur_diff / set.good_r_thrshld // 2
+        diff_score = set.good_r * cur_diff / set.good_r_thrshld
         if diff_score > set.good_r : diff_score = set.good_r
         elif diff_score < 0 : diff_score = 0
         #print("diff_score", diff_score)
         
-        if cur_diff > set.good_r_thrshld or cur_steps_before == -1 :
+        if cur_diff > set.good_r_thrshld or cur_distance == -1 :
             #print("Find new env")
             return set.good_r
         else :
             if not OH_NO_YOURE_NOT_MOVING :
-                #print("is moving")
-                bad = diff_score - set.bad_decline_rate * cur_steps_before
+                bad = diff_score - set.bad_decline_rate * cur_distance
+                #print("is moving", bad)
                 return bad if bad > set.bad_r_min else set.bad_r_min
             else :
-                return set.bad_r_max
-            '''
                 #print("YOU SCREW")
-                bad = bad_r_max - bad_decline_rate * cur_steps_before
+                return set.bad_r_min
+            '''
+                bad = bad_r_max - bad_decline_rate * cur_distance
                 return bad if bad > bad_r_min else bad_r_min
             '''
     
