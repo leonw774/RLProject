@@ -10,17 +10,16 @@ def get_game_region(title) :
         #get the bounding box of the window
         x1, y1, x2, y2 = win32gui.GetWindowRect(gamewin)
         
-        w = (x2 - x1 + 1) # i want smaller region
-        h = (y2 - y1 + 1)
-        y1 += h * 0.1 
-        y2 -= h * 0.1
-        x1 += w * 0.1
-        x2 -= w * 0.1
+        y1 += 50 # get rid of window bar
+        y2 -= 10
+        x1 += 10
+        x2 -= 10
+        
         return (x1, y1, (x2 - x1 + 1), (y2 - y1 + 1))
     else :
         raise Exception("no window title was given.")
         
-game_region = get_game_region("Getting Over It")
+GameRegion = get_game_region("Getting Over It")
 
 class TrainingSetting() :
     
@@ -42,7 +41,7 @@ class TrainingSetting() :
     good_r = 10.0
     bad_r_max = -0.0
     bad_decline_rate = 0.01 # per step
-    bad_r_min = -10.0
+    bad_r_min = -1.0
 
     # ACTION SETTING
     mouse_angle_devision = 16
@@ -59,9 +58,9 @@ class TrainingSetting() :
     eps_decay = 0.99
     epoches = 100
     steps_epoch = 400 # 1000 is too much
-    steps_update_target = 100
+    steps_update_target = 80
     train_thrshld = 40
     steps_train = 8
     batch_size = 16
-    test_steps = 100
+    steps_test = 100
     
