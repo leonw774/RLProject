@@ -77,6 +77,7 @@ class Train() :
         for i in range(distance // intv) :
             self.directInput.directMouse(offset_x, offset_y)
             sleep(intv_time)
+        sleep(set.do_control_pause)
     # end def do_control()
     
     def run(self) :
@@ -90,43 +91,43 @@ class Train() :
         for e in range(set.epoches) :
             
             # click "NEW GAME"
-            click(GameRegion[0] + GameRegion[2] * 0.75, GameRegion[1] + GameRegion[3] * 0.36)
+            click(game_region[0] + game_region[2] * 0.66, game_region[1] + game_region[3] * 0.36)
             sleep(7)
             
             stateQueue = StateQueue()
 
             for n in range(set.steps_epoch) :
+            
+                # make action
                 cur_shot = self.get_screenshot()
-                if random.random() < max(set.eps_min, set.epsilon * (set.eps_decay ** e)):
+                if random.random() < max(set.eps_min, set.epsilon * (set.eps_decay ** (e + n / set.epoches))):
                     cur_action = random.randrange(set.actions_num)
                 else :
-                    q_values = [self.Q.predict([self.add_noise(cur_shot), self.A[a]])[0,0] for a in range(set.actions_num)]
-                    cur_action = np.argmax(q_values)
-
+                    cur_action = np.argmax(self.Q.predict(self.add_noise(cur_shot)))
+                
                 self.do_control(cur_action)
                 
                 nxt_shot = self.get_screenshot()
                 cur_reward = stateQueue.calReward(cur_shot, nxt_shot)
                 #print(cur_action, ",", cur_reward)
                 
-                stateQueue.addStep(cur_shot, self.A[cur_action], cur_reward, nxt_shot)
+                stateQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
                 
-                if (stateQueue.getLength() > set.batch_size
-                and n > set.train_thrshld
-                and n % set.steps_train == 0) :
+                if (stateQueue.getLength() > set.batch_size and n > set.train_thrshld and n % set.steps_train == 0) :
                     # Experience Replay
                     r = random.randint(set.batch_size, stateQueue.getLength())
                     input_scrshots, input_actions, rewards, train_nxt_shots = stateQueue.getStepsInArray(r - set.batch_size, r)
-                    nxt_rewards = np.zeros((set.batch_size, 1))
+                    nxt_rewards = np.zeros((set.batch_size, set.actions_num))
                     
                     for j in range(set.batch_size) :
                         this_nxt_shots = np.reshape(train_nxt_shots[j], set.scrshot_shape)
-                        nxt_rewards[j] = max([self.Q_target.predict([self.add_noise(this_nxt_shots), self.A[a]]) for a in range(set.actions_num)])
+                        #print(input_actions[j])
+                        nxt_rewards[j, int(input_actions[j])] = np.argmax(self.Q_target.predict(self.add_noise(this_nxt_shots)))
                         
                     train_targets = np.add(np.reshape(rewards, (set.batch_size, 1)), np.multiply(set.gamma, nxt_rewards))
                     #print("train_targets:\n", train_targets.tolist())
                     
-                    loss = self.Q.train_on_batch([input_scrshots, input_actions], train_targets)
+                    loss = self.Q.train_on_batch(input_scrshots, train_targets)
                     #print("loss: ", loss)
                     
                 if n % set.steps_update_target == 0 and n != 0 :
@@ -156,7 +157,7 @@ class Train() :
         self.Q.load_weights(model_weight_name)
         
         # click "NEW GAME"
-        click(GameRegion[0] + GameRegion[2] * 0.75, GameRegion[1] + GameRegion[3] * 0.36)
+        click(GameRegion[0] + GameRegion[2] * 0.66, GameRegion[1] + GameRegion[3] * 0.36)
         sleep(7)
         
         totalReward = 0

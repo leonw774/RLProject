@@ -5,17 +5,14 @@ from keras.layers import Activation, Concatenate, Conv2D, Conv3D, Dense, Dropout
 # Q-network: guess how many score it will make
 def QNet(scrshot_size, action_size) :
     input_image = Input(scrshot_size) # image
-    x = Conv2D(8, (3, 3), padding = "valid", activation = LeakyReLU(0.2))(input_image)
+    x = Conv2D(32, (8, 8), padding = "valid", activation = LeakyReLU(0.2))(input_image)
+    x = MaxPooling2D((4, 4), padding = "same")(x)
+    x = Conv2D(64, (4, 4), padding = "valid", activation = LeakyReLU(0.2))(x)
     x = MaxPooling2D((2, 2), padding = "same")(x)
-    x = Conv2D(16, (3, 3), padding = "valid", activation = LeakyReLU(0.2))(x)
-    x = MaxPooling2D((2, 2), padding = "same")(x)
-    x = Conv2D(32, (3, 3), strides = (2, 2), padding = "valid", activation = LeakyReLU(0.2))(x)
-    flat_image = Flatten()(x)
-    
-    input_action = Input((action_size,)) # one-hot
-    #flat_action = Flatten()(input_action)
-    
-    conc = Concatenate()([flat_image, input_action])
-    score = Dense(1)(conc)
-    model = Model([input_image, input_action], score)
+    x = Conv2D(128, (3, 3), padding = "valid", activation = LeakyReLU(0.2))(x)
+    x = Flatten()(x)
+    x = Dense(256)(x)
+    scores = Dense(action_size)(x)
+    model = Model(input_image, scores)
+    model.summary()
     return model
