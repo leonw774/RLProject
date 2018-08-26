@@ -1,5 +1,3 @@
-from setting import GameRegion
-from setting import TrainingSetting as set
 from train import Train
 
 train = Train()

@@ -27,7 +27,8 @@ class StateQueue() :
     def getLength(self) :
         return len(self.scrshotList)
             
-    def getStepsInArray(self, begin, to) :
+    def getStepsInArray(self, begin, size) :
+        to = begin + size
         return np.array(self.scrshotList[begin:to]), np.array(self.actionList[begin:to]), np.array(self.rewardList[begin:to]), np.array(self.nxtScrshotsList[begin:to])
         
     def getScrshotAt(self, stepNum) :
@@ -78,9 +79,9 @@ class StateQueue() :
                     pre_diff = cur_d
                     pre_distance = len(self.scrshotList) - step
             #print("cur_diff", cur_diff, "pre_diff", pre_diff)
-            OH_NO_YOURE_NOT_MOVING = cur_distance < 3 and pre_distance < 3
+            OH_NO_YOURE_NOT_MOVING = cur_distance < 2 and pre_distance < 2
         
-        diff_score = set.good_r * cur_diff / set.good_r_thrshld ** 0.5
+        diff_score = (cur_diff / set.good_r_thrshld) * set.good_r
         if diff_score > set.good_r : diff_score = set.good_r
         elif diff_score < 0 : diff_score = 0
         #print("diff_score", diff_score)
@@ -92,12 +93,10 @@ class StateQueue() :
             if not OH_NO_YOURE_NOT_MOVING :
                 bad = diff_score - set.bad_decline_rate * cur_distance
                 #print("is moving", bad)
-                return bad if bad > set.bad_r_min else set.bad_r_min
+                return bad if bad > set.bad_r_max else set.bad_r_max
             else :
                 #print("YOU SCREW")
-                return set.bad_r_min
-            '''
-                bad = bad_r_max - bad_decline_rate * cur_distance
-                return bad if bad > bad_r_min else bad_r_min
-            '''
+                #return set.bad_r_max
+                bad = set.bad_r_max - set.bad_decline_rate * cur_distance
+                return bad if bad > set.bad_r_min else set.bad_r_min
     
