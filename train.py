@@ -33,7 +33,7 @@ class Train() :
             print(cd - i)
             sleep(1.0)
             
-    def get_screenshot(self, savefile = None) :
+    def get_screenshot(self, num = 1, savefile = None) :
         sleep(set.scrshot_intv_time)
         array_scrshot = np.zeros(set.scrshot_shape)
         while(True) :
@@ -62,25 +62,25 @@ class Train() :
     def do_control(self, id) : 
         '''
         相對方向的滑動
-        未來或許可以嘗試在ActionSet中加入控制快慢和距離的選擇
         [slow moving x angle_num, fast moving x angle_num]
         '''
         slow_distance = 3200 # pixels
         fast_distance = 8000 # pixels
-        slow_intv = 8 # pixels
-        fast_intv = 32
-        intv_time = 0.0032
+        slow_intv_distance = 4 # pixels
+        fast_intv_distance = 12
+        intv_time = 0.001
+        
         
         if id < set.mouse_angle_devision :
-            intv, distance = slow_intv, slow_distance
+            intv_distance, distance = slow_intv_distance, slow_distance
         else :
-            intv, distance = fast_intv, fast_distance
+            intv_distance, distance = fast_intv_distance, fast_distance
         
         angle = 2 * math.pi * id / set.mouse_angle_devision
-        offset_x = math.ceil(math.cos(angle) * intv)
-        offset_y = math.ceil(math.sin(angle) * intv)
+        offset_x = math.ceil(math.cos(angle) * intv_distance)
+        offset_y = math.ceil(math.sin(angle) * intv_distance)
         
-        for i in range(distance // intv) :
+        for i in range(distance // intv_distance) :
             self.directInput.directMouse(offset_x, offset_y)
             sleep(intv_time)
         sleep(set.do_control_pause)
@@ -94,6 +94,9 @@ class Train() :
         update Q's weight in mse
         after a number of steps, copy Q to Q_target.
         '''
+        
+        nxt_shot = self.get_screenshot()
+        
         for e in range(set.epoches) :
             
             # click "NEW GAME"
@@ -101,6 +104,7 @@ class Train() :
             sleep(7)
             
             stateQueue = StateQueue()
+            total_reward = 0
 
             for n in range(set.steps_epoch) :
             
@@ -108,23 +112,24 @@ class Train() :
                 cur_shot = self.get_screenshot()
                 if random.random() < max(set.eps_min, set.epsilon * (set.eps_decay ** e)):
                     cur_action = random.randrange(set.actions_num)
-                    #print(np.argmax(self.Q.predict(self.add_noise(cur_shot))))
                 else :
-                    cur_action = np.argmax(self.Q.predict(self.add_noise(cur_shot)))
-                    #print(cur_action)
+                    cur_action = np.argmax(self.Q.predict([self.add_noise(nxt_shot), self.add_noise(cur_shot)]))
                 
                 self.do_control(cur_action)
                 
                 nxt_shot = self.get_screenshot()
-                cur_reward = stateQueue.calReward(cur_shot, nxt_shot)
+                cur_reward = stateQueue.calReward(cur_shot, nxt_shot) # pre, cur
                 print(cur_action, ",", cur_reward)
+                if cur_reward == "stuck" : break
                 
+                total_reward += cur_reward
                 stateQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
                 
                 if stateQueue.getLength() > set.train_size and n > set.train_thrshld and n % set.steps_train == 0 :
                     # Experience Replay
-                    r = random.randint(0, stateQueue.getLength() - set.train_size)
-                    input_scrshots, input_actions, rewards, train_nxt_shots = stateQueue.getStepsInArray(r, set.train_size)
+                    r = random.randint(1, stateQueue.getLength() - set.train_size)
+                    input_cur_scrshots, input_actions, rewards, train_nxt_shots = stateQueue.getStepsAsArray(r, set.train_size)
+                    input_pre_scrshots = stateQueue.getNxtScrshotAsArray(r - 1, set.train_size)
                     
                     # make replay reward array
                     replay_rewards = np.zeros((set.train_size, set.actions_num))
@@ -135,14 +140,13 @@ class Train() :
                     nxt_rewards = np.zeros((set.train_size, set.actions_num))
                     
                     for j in range(set.train_size) :
-                        this_nxt_shots = np.reshape(train_nxt_shots[j], set.scrshot_shape)
+                        this_nxt_shots = self.add_noise(np.reshape(train_nxt_shots[j], set.scrshot_shape))
+                        this_cur_shots = self.add_noise(np.reshape(input_cur_scrshots[j], set.scrshot_shape))
                         #print(input_actions[j])
                         if set.steps_update_target > 0 :
-                            nxt_rewards[j] = self.Q.predict(self.add_noise(this_nxt_shots))
-                            nxt_rewards[j, int(input_actions[j])] = np.argmax(self.Q.predict(self.add_noise(this_nxt_shots)))
+                            nxt_rewards[j] = self.Q.predict([this_cur_shots, this_nxt_shots])
                         else :
                             nxt_rewards[j] = self.Q_target.predict(self.add_noise(this_nxt_shots))
-                            nxt_rewards[j, int(input_actions[j])] = np.argmax(self.Q_target.predict(self.add_noise(this_nxt_shots)))
                         
                     train_targets = np.add(replay_rewards, np.multiply(set.gamma, nxt_rewards))
                     
@@ -150,16 +154,16 @@ class Train() :
                     #print("nxt_rewards\n", nxt_rewards[0])
                     #print("train_targets\n", train_targets[0])
                     
-                    loss = self.Q.train_on_batch(input_scrshots, train_targets)
+                    loss = self.Q.train_on_batch([input_pre_scrshots, input_cur_scrshots], train_targets)
                     #print("loss: ", loss)
                     
-                if set.steps_update_target > 0 and n % set.steps_update_target == 0 and n != 0 :
+                if set.steps_update_target > 0 and n % set.steps_update_target == 0 and n > set.train_thrshld :
                     print("assign Qtarget")
                     self.Q_target.set_weights(self.Q.get_weights())
                     self.Q_target.save_weights("Q_target_weight.h5")
                     
                 # end for(STEP_PER_EPOCH)  
-            print("end epoch", e)
+            print("end epoch", e, "total_reward:", total_reward)
             del stateQueue
             
             # Restart Game...
@@ -185,6 +189,7 @@ class Train() :
         click(GameRegion[0] + GameRegion[2] * 0.66, GameRegion[1] + GameRegion[3] * 0.36)
         sleep(7)
         
+        stateQueue = StateQueue()
         totalReward = 0
         
         for n in range(set.steps_test) :
@@ -195,7 +200,13 @@ class Train() :
                 cur_action = np.argmax(self.Q.predict(self.add_noise(cur_shot)))
 
             self.do_control(cur_action)
+            nxt_shot = self.get_screenshot()
+            cur_reward = stateQueue.calReward(cur_shot, nxt_shot) # pre, cur
+            if cur_reward == "stuck" : break
+            total_reward += cur_reward
         
+        del stateQueue
+        print("eval end, totalReward:", totalReward)
         screenshot(region = GameRegion).save("eval_scrshot.png")
         
         # Exit Game...

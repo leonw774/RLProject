@@ -38,30 +38,32 @@ class TrainingSetting() :
 
     # REWARD SETTING
     gamma = 0.26894142137 # 1 / (1 + exp(1))
-    good_r_thrshld = int(scrshot_h * scrshot_w * color_size * (0.04 + 2 * noise_range)) # 0.1
-    good_r = 100.0
+    good_r_thrshld = scrshot_h * scrshot_w * color_size * (0.02 + 2 * noise_range) # 0.08
+    no_move_thrshld = scrshot_h * scrshot_w * color_size * 0.01
+    good_r = 10.0
     bad_r_max = -0.0
     bad_decline_rate = 1.0 # per step
-    bad_r_min = -100.0
+    bad_r_min = -1.0
 
     # ACTION SETTING
     mouse_angle_devision = 18
     actions_num = mouse_angle_devision * 2
     # {slow moving, fast moving}
-    do_control_pause = 0.003
+    do_control_pause = 0.006
 
-    # STATE QUEUE SETTING    
-    statequeue_length_max = 10000
+    # STATE QUEUE SETTING
+    
+    statequeue_length_max = 10000 # set 0 to be no limit
 
     # TRAINING SETTING
     epsilon = 1.0
     eps_min = 0.2
     eps_decay = 0.999
-    epoches = 100
-    steps_epoch = 1001
+    epoches = 400
+    steps_epoch = 2501
     train_thrshld = 200
     steps_train = 8
-    train_size = 32
+    train_size = 64
     #batch_size = 8
     steps_update_target = 100 # set to 0 to disable
     
