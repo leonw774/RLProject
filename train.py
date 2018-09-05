@@ -67,8 +67,8 @@ class Train() :
         slow_distance = 3200 # pixels
         fast_distance = 8000 # pixels
         slow_intv_distance = 4 # pixels
-        fast_intv_distance = 12
-        intv_time = 0.001
+        fast_intv_distance = 32
+        intv_time = 0.0025
         
         
         if id < set.mouse_angle_devision :
@@ -95,8 +95,6 @@ class Train() :
         after a number of steps, copy Q to Q_target.
         '''
         
-        nxt_shot = self.get_screenshot()
-        
         for e in range(set.epoches) :
             
             # click "NEW GAME"
@@ -105,21 +103,22 @@ class Train() :
             
             stateQueue = StateQueue()
             total_reward = 0
+            cur_shot = self.get_screenshot() # as pre_shot
 
             for n in range(set.steps_epoch) :
-            
-                # make action
+                pre_shot = cur_shot
                 cur_shot = self.get_screenshot()
+                # make action
                 if random.random() < max(set.eps_min, set.epsilon * (set.eps_decay ** e)):
                     cur_action = random.randrange(set.actions_num)
                 else :
-                    cur_action = np.argmax(self.Q.predict([self.add_noise(nxt_shot), self.add_noise(cur_shot)]))
+                    cur_action = np.argmax(self.Q.predict([self.add_noise(pre_shot), self.add_noise(cur_shot)]))
                 
                 self.do_control(cur_action)
                 
                 nxt_shot = self.get_screenshot()
-                cur_reward = stateQueue.calReward(cur_shot, nxt_shot) # pre, cur
-                print(cur_action, ",", cur_reward)
+                cur_reward = stateQueue.calReward(cur_shot, nxt_shot) # pre-action, after-action
+                #print(cur_action, ",", cur_reward)
                 if cur_reward == "stuck" : break
                 
                 total_reward += cur_reward
@@ -129,7 +128,7 @@ class Train() :
                     # Experience Replay
                     r = random.randint(1, stateQueue.getLength() - set.train_size)
                     input_cur_scrshots, input_actions, rewards, train_nxt_shots = stateQueue.getStepsAsArray(r, set.train_size)
-                    input_pre_scrshots = stateQueue.getNxtScrshotAsArray(r - 1, set.train_size)
+                    input_pre_scrshots = stateQueue.getScrshotAsArray(r - 1, set.train_size)
                     
                     # make replay reward array
                     replay_rewards = np.zeros((set.train_size, set.actions_num))
@@ -191,18 +190,20 @@ class Train() :
         
         stateQueue = StateQueue()
         totalReward = 0
-        
+        cur_shot = self.get_screenshot()
         for n in range(set.steps_test) :
+            pre_shot = cur_shot
             cur_shot = self.get_screenshot()
             if random.random() < set.eps_test :
                 cur_action = random.randrange(set.actions_num)
             else :
-                cur_action = np.argmax(self.Q.predict(self.add_noise(cur_shot)))
+                cur_action = np.argmax(self.Q.predict([self.add_noise(pre_shot), self.add_noise(cur_shot)]))
 
             self.do_control(cur_action)
             nxt_shot = self.get_screenshot()
             cur_reward = stateQueue.calReward(cur_shot, nxt_shot) # pre, cur
             if cur_reward == "stuck" : break
+            stateQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
             total_reward += cur_reward
         
         del stateQueue
@@ -222,8 +223,21 @@ class Train() :
         # click "NEW GAME"
         click(GameRegion[0] + GameRegion[2] * 0.66, GameRegion[1] + GameRegion[3] * 0.36)
         sleep(7)
+        stateQueue = StateQueue()
+        total_reward = 0
         for n in range(times) :
-            self.do_control(random.randrange(set.actions_num))
+            cur_shot = self.get_screenshot()
+            cur_action = random.randrange(set.actions_num)
+            self.do_control(cur_action)
+            nxt_shot = self.get_screenshot()
+            cur_reward = stateQueue.calReward(cur_shot, nxt_shot)
+            #print(cur_action, ",", cur_reward)
+            if cur_reward == "stuck" : break
+            stateQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
+            total_reward += cur_reward
+        
+        del stateQueue
+        print("eval end, totalReward:", total_reward)
         # Exit Game...
         # push ESC
         self.directInput.directKey("ESC")
@@ -237,6 +251,7 @@ class Train() :
 if __name__ == '__main__' :
     train = Train()
     train.count_down(3)
+    #train.random_action(128)
     train.run()
     train.eval("Q_target_weight.h5")
     
