@@ -9,7 +9,7 @@ from keras.models import Model
 
 from setting import TrainingSetting as set
 from setting import GameRegion
-from statequeue import StateQueue
+from stepqueue import StepQueue
 from directinputs import Keys
 from QNet import QNet
 
@@ -106,7 +106,7 @@ class Train() :
             click(GameRegion[0] + GameRegion[2] * 0.66, GameRegion[1] + GameRegion[3] * 0.36)
             sleep(7)
             
-            stateQueue = StateQueue()
+            stepQueue = StepQueue()
             total_reward = 0
             cur_shot = self.get_screenshot() # as pre_shot
 
@@ -122,7 +122,7 @@ class Train() :
                 self.do_control(cur_action)
                 
                 nxt_shot = self.get_screenshot()
-                cur_reward = stateQueue.calReward(cur_shot, nxt_shot) # pre-action, after-action
+                cur_reward = stepQueue.calReward(cur_shot, nxt_shot) # pre-action, after-action
                 #print(cur_action, ",", cur_reward)
                 if cur_reward == "stuck" :
                     print("at step", n)
@@ -130,13 +130,13 @@ class Train() :
                     break
                 
                 total_reward += cur_reward
-                stateQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
+                stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
                 
-                if stateQueue.getLength() > set.train_size and n > set.train_thrshld and n % set.steps_train == 0 :
+                if stepQueue.getLength() > set.train_size and n > set.train_thrshld and n % set.steps_train == 0 :
                     # Experience Replay
-                    r = random.randint(1, stateQueue.getLength() - set.train_size)
-                    input_cur_scrshots, input_actions, rewards, train_nxt_shots = stateQueue.getStepsAsArray(r, set.train_size)
-                    input_pre_scrshots = stateQueue.getScrshotAsArray(r - 1, set.train_size)
+                    r = random.randint(1, stepQueue.getLength() - set.train_size)
+                    input_cur_scrshots, input_actions, rewards, train_nxt_shots = stepQueue.getStepsAsArray(r, set.train_size)
+                    input_pre_scrshots = stepQueue.getScrshotAsArray(r - 1, set.train_size)
                     
                     # make replay reward array
                     replay_rewards = np.zeros((set.train_size, set.actions_num))
@@ -170,7 +170,7 @@ class Train() :
                     
                 # end for(STEP_PER_EPOCH)  
             print("end epoch", e, "total_reward:", total_reward)
-            del stateQueue
+            del stepQueue
             
             # Restart Game...
             sleep(0.1)
@@ -195,7 +195,7 @@ class Train() :
         click(GameRegion[0] + GameRegion[2] * 0.66, GameRegion[1] + GameRegion[3] * 0.36)
         sleep(7)
         
-        stateQueue = StateQueue()
+        stepQueue = stepQueue()
         totalReward = 0
         cur_shot = self.get_screenshot()
         for n in range(set.steps_test) :
@@ -208,12 +208,12 @@ class Train() :
 
             self.do_control(cur_action)
             nxt_shot = self.get_screenshot()
-            cur_reward = stateQueue.calReward(cur_shot, nxt_shot) # pre, cur
+            cur_reward = stepQueue.calReward(cur_shot, nxt_shot) # pre, cur
             if cur_reward == "stuck" : break
-            stateQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
+            stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
             total_reward += cur_reward
         
-        del stateQueue
+        del stepQueue
         print("eval end, totalReward:", totalReward)
         screenshot(region = GameRegion).save("eval_scrshot.png")
         
@@ -230,23 +230,23 @@ class Train() :
         # click "NEW GAME"
         click(GameRegion[0] + GameRegion[2] * 0.66, GameRegion[1] + GameRegion[3] * 0.36)
         sleep(7)
-        stateQueue = StateQueue()
+        stepQueue = stepQueue()
         total_reward = 0
         for n in range(times) :
             cur_shot = self.get_screenshot()
             cur_action = random.randrange(set.actions_num)
             self.do_control(cur_action)
             nxt_shot = self.get_screenshot()
-            cur_reward = stateQueue.calReward(cur_shot, nxt_shot)
+            cur_reward = stepQueue.calReward(cur_shot, nxt_shot)
             #print(cur_action, ",", cur_reward)
             if cur_reward == "stuck" :
                 print("at step", n)
                 screenshot(region = GameRegion).save("stuck_at_random.png")
                 break
-            stateQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
+            stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
             total_reward += cur_reward
         
-        del stateQueue
+        del stepQueue
         print("eval end, totalReward:", total_reward)
         # Exit Game...
         # push ESC

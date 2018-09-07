@@ -45,10 +45,10 @@ class TrainingSetting() :
     stuck_thrshld = 40
     
     use_compare_block = False
-    compare_side_num = 4
-    compare_num = compare_side_num**2
-    compare_stride = max(scrshot_h // compare_side_num, scrshot_w // compare_side_num)
-    compare_block_size = (compare_num, scrshot_h // compare_side_num, scrshot_w // compare_side_num, color_size)
+    block_side_num = 4
+    block_num = block_side_num**2
+    compare_stride = max(scrshot_h // block_side_num, scrshot_w // block_side_num)
+    compare_block_size = (block_num, scrshot_h // block_side_num, scrshot_w // block_side_num, color_size)
     
     good_r = 1.0
     bad_r = -0.0
@@ -60,9 +60,8 @@ class TrainingSetting() :
     # {slow moving, fast moving}
     do_control_pause = 0.01
 
-    # STATE QUEUE SETTING
-    
-    statequeue_length_max = 10000 # set 0 to be no limit
+    # STEP QUEUE SETTING
+    stepQueue_length_max = 10000 # set 0 to be no limit
 
     # TRAINING SETTING
     epsilon = 1.0

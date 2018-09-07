@@ -1,7 +1,7 @@
 import numpy as np
 from setting import TrainingSetting as set
 
-class StateQueue() :
+class StepQueue() :
 
     def __init__(self) :
         self.scrshotList = [] 
@@ -10,7 +10,7 @@ class StateQueue() :
         self.nxtScrshotsList = []
     
     def addStep(self, scrshot, action, reward, nxt_scrshot) :
-        if len(self.scrshotList) + 1 == set.statequeue_length_max :
+        if len(self.scrshotList) + 1 == set.stepQueue_length_max :
             self.scrshotList.pop(0)
             self.actionList.pop(0)
             self.rewardList.pop(0)
@@ -28,9 +28,9 @@ class StateQueue() :
     def getLength(self) :
         return len(self.scrshotList)
             
-    def getStepsAsArray(self, begin, size) :
-        to = begin + size
-        return np.array(self.scrshotList[begin:to]), np.array(self.actionList[begin:to]), np.array(self.rewardList[begin:to]), np.array(self.nxtScrshotsList[begin:to])
+    def getStepsAsArray(self, beg, size) :
+        to = beg + size
+        return np.array(self.scrshotList[beg:to]), np.array(self.actionList[beg:to]), np.array(self.rewardList[beg:to]), np.array(self.nxtScrshotsList[beg:to])
         
     def getScrshotAsArray(self, beg, size) :
         try :
@@ -57,8 +57,8 @@ class StateQueue() :
             print("Out of Boundary Error")
                       
     def calReward(self, pre_scrshot, cur_scrshot) :
-        pre_scrshot = pre_scrshot[0]
-        cur_scrshot = cur_scrshot[0]
+        pre_scrshot = pre_scrshot[0] # before action
+        cur_scrshot = cur_scrshot[0] # after action
         if len(self.scrshotList) <= 2 : return 0
         
         #print(cur_scrshot.shape)
@@ -101,39 +101,49 @@ class StateQueue() :
                 return "stuck"
             
             # blocks image diff 
-            # this algorithm is bigO(n^3), very slow. Only use if computer good
+            # this algorithm is bigO(n^3), very slow. Only use if computer is good
             if set.use_compare_block and d > set.no_move_thrshld and not OH_NO_YOURE_NOT_MOVING :
                 # make compare_blocks
-                for i in range(set.compare_side_num) :
-                    for j in range(set.compare_side_num) :
-                        compare_blocks[i*set.compare_side_num + j] = cur_scrshot[i*block_h : (i+1)*block_h, j*block_w : (j+1)*block_w]
+                # hack from stackoverflow :
+                compare_blocks = cur_scrshot.reshape(block_h, set.block_side_num, -1, set.block_side_num)
+                                            .swapaxes(1,2)
+                                            .reshape(-1, set.block_side_num, set.block_side_num)
                 
-                compare_result_array = np.full((set.compare_num), 2147483648)
-                for n in range(set.compare_num) :
+                compare_result_array = np.full((set.block_num), 2147483648)
+                for n in range(set.block_num) :
                     i = 0
                     j = 0
                     while(i+block_h < set.scrshot_h) :
                         while(j+block_w < set.scrshot_w) :
-                            compare_result_array[n] = min(compare_result_array[n], np.sum(np.absolute(this_scrshot[i:i+block_h, j:j+block_w] - compare_blocks[n])))
+                            compare_result_array[n] = min(
+                                compare_result_array[n],
+                                np.sum(
+                                    np.absolute(
+                                        this_scrshot[i:i+block_h, j:j+block_w] - compare_blocks[n]
+                                    )
+                                )
+                            )
                             j += set.compare_stride
                         i += set.compare_stride
                 # compare_result : 0 --> there is same(diff big), 1 --> there is no same(diff small)
-                block_diff = np.sum((compare_result_array < (set.good_thrshld/set.compare_num)).astype(np.int))
+                block_diff = np.sum((compare_result_array < set.good_thrshld / set.block_num).astype(np.int))
                 if block_diff < min_block_diff :
                     min_block_diff = block_diff
                     min_block_diff_dist = len(self.scrshotList) - this_step
             # end if block diff
         # end for step, scrshot
         # check again if is not moving
-        OH_NO_YOURE_NOT_MOVING = min_full_diff_dist <= 2 or (min_block_diff < set.compare_side_num and min_block_diff_dist <= 2)
+        OH_NO_YOURE_NOT_MOVING = min_full_diff_dist <= 2 or (min_block_diff < set.block_side_num and min_block_diff_dist <= 2)
         
         # calculate score
         if min_full_diff_dist > 0 :
-            full_score = min_full_diff/set.good_thrshld if min_full_diff < set.good_thrshld else 1
+            full_score = min_full_diff / set.good_thrshld if min_full_diff < set.good_thrshld else 1
         if min_block_diff_dist > 0 :
-            block_score = min_block_diff/set.compare_num if min_block_diff < set.compare_side_num * 2 else 1
-        if full_score >= block_score : diff_score, diff_dist = full_score, min_full_diff_dist
-        else : diff_score, diff_dist = block_score, min_block_diff_dist
+            block_score = min_block_diff / set.block_num if min_block_diff < set.block_side_num * 2 else 1
+        if full_score >= block_score :
+            diff_score, diff_dist = full_score, min_full_diff_dist
+        else :
+            diff_score, diff_dist = block_score, min_block_diff_dist
         diff_score *= set.good_r
         #print("full diff:", min_full_diff, ", block diff:", min_block_diff)             
         
