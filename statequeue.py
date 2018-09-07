@@ -69,74 +69,77 @@ class StateQueue() :
         min_block_diff = 2147483648
         min_block_diff_dist = -1
         
+        full_score = -1
+        block_score = -1
+        
         OH_NO_YOURE_NOT_MOVING = np.sum(np.absolute(pre_scrshot - cur_scrshot)) < set.no_move_thrshld
         OH_NO_YOURE_STUCK = 0
-        NOT_STUCK_COUNTDOWN = set.steps_update_target # 
+        NOT_STUCK_COUNTDOWN = set.stuck_countdown
         
-        # full image diff and stuck check         
-        if not OH_NO_YOURE_NOT_MOVING :
-            # find the screenshot that is most similar: smallest diff
-            for this_step, this_scrshot in enumerate(self.scrshotList) :
-                d = np.sum(np.absolute(np.subtract(this_scrshot, cur_scrshot)))
-                
-                if d <= set.no_move_thrshld : OH_NO_YOURE_STUCK += 1
-                elif NOT_STUCK_COUNTDOWN > 0 : NOT_STUCK_COUNTDOWN -= 1
-                else : 
-                    OH_NO_YOURE_STUCK = 0
-                    NOT_STUCK_COUNTDOWN = set.steps_update_target
-                
-                if OH_NO_YOURE_STUCK > 16 :
-                    print("stuck")
-                    return "stuck"
-                
-                if d < min_full_diff :
-                    min_full_diff = d
-                    min_full_diff_dist = len(self.scrshotList) - this_step
-            # check again if is not moving
-            OH_NO_YOURE_NOT_MOVING = min_full_diff_dist <= 2
-        
-        # blocks diff
-        if not OH_NO_YOURE_NOT_MOVING :
+        if set.use_compare_block :
             block_h = set.compare_block_size[1]
             block_w = set.compare_block_size[2]
-            for this_step, this_scrshot in enumerate(self.scrshotList) :
-                compare_array = np.zeros(set.compare_block_size)
+            compare_blocks = np.zeros(set.compare_block_size)
+           
+        # find the screenshot that is most similar: smallest diff
+        for this_step, this_scrshot in enumerate(reversed(self.scrshotList)) :
+            # full image diff
+            d = np.sum(np.absolute(np.subtract(this_scrshot, cur_scrshot)))
+            if d < min_full_diff :
+                min_full_diff = d
+                min_full_diff_dist = len(self.scrshotList) - this_step
+            
+            # stuck check
+            if d <= set.no_move_thrshld and NOT_STUCK_COUNTDOWN > 0 :
+                OH_NO_YOURE_STUCK += 1  
+            else : 
+                OH_NO_YOURE_STUCK = 0
+            NOT_STUCK_COUNTDOWN -= 1
+            
+            if OH_NO_YOURE_STUCK > set.stuck_thrshld :
+                print("stuck")
+                return "stuck"
+            
+            # blocks image diff 
+            # this algorithm is bigO(n^3), very slow. Only use if computer good
+            if set.use_compare_block and d > set.no_move_thrshld and not OH_NO_YOURE_NOT_MOVING :
+                # make compare_blocks
                 for i in range(set.compare_side_num) :
                     for j in range(set.compare_side_num) :
-                        compare_array[i*set.compare_side_num + j] = cur_scrshot[i*block_h : (i+1)*block_h, j*block_w : (j+1)*block_w]
+                        compare_blocks[i*set.compare_side_num + j] = cur_scrshot[i*block_h : (i+1)*block_h, j*block_w : (j+1)*block_w]
                 
                 compare_result_array = np.full((set.compare_num), 2147483648)
                 for n in range(set.compare_num) :
-                    this_block = compare_array[n]
                     i = 0
                     j = 0
                     while(i+block_h < set.scrshot_h) :
                         while(j+block_w < set.scrshot_w) :
-                            this_scrshot_block = this_scrshot[i : i+block_h, j : j+block_w]
-                            compare_result_array[n] = min(compare_result_array[n], np.sum(np.absolute(this_scrshot_block - compare_array[n])))
+                            compare_result_array[n] = min(compare_result_array[n], np.sum(np.absolute(this_scrshot[i:i+block_h, j:j+block_w] - compare_blocks[n])))
                             j += set.compare_stride
                         i += set.compare_stride
-                    compare_result_array[n] = 0 if compare_result_array[n] >= (set.good_thrshld / set.compare_num) else 1
-                # compare_result : 0 --> there is same, 1 --> there is no same
-                block_diff = np.sum(compare_result_array)
+                # compare_result : 0 --> there is same(diff big), 1 --> there is no same(diff small)
+                block_diff = np.sum((compare_result_array < (set.good_thrshld/set.compare_num)).astype(np.int))
                 if block_diff < min_block_diff :
                     min_block_diff = block_diff
                     min_block_diff_dist = len(self.scrshotList) - this_step
-            OH_NO_YOURE_NOT_MOVING = min_block_diff < set.compare_side_num and min_block_diff_dist <= 2
+            # end if block diff
+        # end for step, scrshot
+        # check again if is not moving
+        OH_NO_YOURE_NOT_MOVING = min_full_diff_dist <= 2 or (min_block_diff < set.compare_side_num and min_block_diff_dist <= 2)
         
         # calculate score
-        full_score = min_full_diff/set.good_thrshld*set.good_r if min_full_diff < set.good_thrshld else set.good_r
-        block_score = min_block_diff/set.compare_num*set.good_r if min_block_diff < (set.compare_side_num-1)*4 else set.good_r
-        if full_score >= block_score :
-            diff_score, diff_dist = full_score, min_full_diff_dist
-        else :
-            diff_score, diff_dist = block_score, min_block_diff_dist
+        if min_full_diff_dist > 0 :
+            full_score = min_full_diff/set.good_thrshld if min_full_diff < set.good_thrshld else 1
+        if min_block_diff_dist > 0 :
+            block_score = min_block_diff/set.compare_num if min_block_diff < set.compare_side_num * 2 else 1
+        if full_score >= block_score : diff_score, diff_dist = full_score, min_full_diff_dist
+        else : diff_score, diff_dist = block_score, min_block_diff_dist
+        diff_score *= set.good_r
         #print("full diff:", min_full_diff, ", block diff:", min_block_diff)             
         
         if not OH_NO_YOURE_NOT_MOVING :
-            #print("diff_score", diff_score)
+            #print("is moving\ndiff_score", diff_score)
             score = diff_score - set.bad_decline_rate * diff_dist
-            #print("is moving")
             return score if score > set.bad_r else set.bad_r
         else :
             #print("YOU SCREW")

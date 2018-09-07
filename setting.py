@@ -40,13 +40,19 @@ class TrainingSetting() :
     gamma = 0.26894142137 # 1 / (1 + exp(1))
     good_thrshld = scrshot_h * scrshot_w * color_size * (0.0396 + 2 * noise_range) # 0.1
     no_move_thrshld = scrshot_h * scrshot_w * color_size * 0.0396
-    compare_side_num = 8
+    
+    stuck_countdown = 80
+    stuck_thrshld = 40
+    
+    use_compare_block = False
+    compare_side_num = 4
     compare_num = compare_side_num**2
-    compare_stride = 4
+    compare_stride = max(scrshot_h // compare_side_num, scrshot_w // compare_side_num)
     compare_block_size = (compare_num, scrshot_h // compare_side_num, scrshot_w // compare_side_num, color_size)
+    
     good_r = 1.0
     bad_r = -0.0
-    bad_decline_rate = 0.002 # per step
+    bad_decline_rate = 0.005 # per step
 
     # ACTION SETTING
     mouse_angle_devision = 18
@@ -62,13 +68,13 @@ class TrainingSetting() :
     epsilon = 1.0
     eps_min = 0.2
     eps_decay = 0.999
-    epoches = 200
+    epoches = 400
     steps_epoch = 2501
-    train_thrshld = 200
+    train_thrshld = 201
     steps_train = 8
     train_size = 64
     #batch_size = 8
-    steps_update_target = 250 # set to 0 to disable
+    steps_update_target = 200 # set to 0 to disable
     
     eps_test = 0.02
     steps_test = 400

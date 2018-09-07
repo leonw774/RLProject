@@ -3,6 +3,7 @@ import math
 import numpy as np
 from PIL import Image
 from time import sleep
+from datetime import datetime, timedelta
 from pyautogui import click, screenshot
 from keras.models import Model
 
@@ -14,11 +15,15 @@ from QNet import QNet
 
 class Train() :
     
-    def __init__(self) :
+    def __init__(self, use_weight_file = None) :
         self.directInput = Keys()
         self.Q = QNet(set.model_input_shape, set.actions_num)
         self.Q.summary()
         self.Q.compile(loss = "mse", optimizer = set.model_optimizer)
+        
+        if use_model :
+            self.Q.load_weights(use_weight_file)
+        
         if set.steps_update_target > 0 :
             self.Q_target = QNet(set.model_input_shape, set.actions_num)
             self.Q_target.set_weights(self.Q.get_weights())
@@ -64,10 +69,10 @@ class Train() :
         相對方向的滑動
         [slow moving x angle_num, fast moving x angle_num]
         '''
-        slow_distance = 3200 # pixels
-        fast_distance = 8000 # pixels
-        slow_intv_distance = 4 # pixels
-        fast_intv_distance = 32
+        slow_distance = 2400 # pixels
+        fast_distance = 4000 # pixels
+        slow_intv_distance = 5 # pixels
+        fast_intv_distance = 30
         intv_time = 0.0025
         
         
@@ -119,7 +124,10 @@ class Train() :
                 nxt_shot = self.get_screenshot()
                 cur_reward = stateQueue.calReward(cur_shot, nxt_shot) # pre-action, after-action
                 #print(cur_action, ",", cur_reward)
-                if cur_reward == "stuck" : break
+                if cur_reward == "stuck" :
+                    print("at step", n)
+                    screenshot(region = GameRegion).save("stuck_at_epoch" + str(e) + ".png")
+                    break
                 
                 total_reward += cur_reward
                 stateQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
@@ -137,7 +145,6 @@ class Train() :
                     
                     # make next predicted reward array
                     nxt_rewards = np.zeros((set.train_size, set.actions_num))
-                    
                     for j in range(set.train_size) :
                         this_nxt_shots = self.add_noise(np.reshape(train_nxt_shots[j], set.scrshot_shape))
                         this_cur_shots = self.add_noise(np.reshape(input_cur_scrshots[j], set.scrshot_shape))
@@ -145,9 +152,9 @@ class Train() :
                         if set.steps_update_target > 0 :
                             nxt_rewards[j] = self.Q.predict([this_cur_shots, this_nxt_shots])
                         else :
-                            nxt_rewards[j] = self.Q_target.predict(self.add_noise(this_nxt_shots))
+                            nxt_rewards[j] = self.Q_target.predict([this_cur_shots, this_nxt_shots])
                         
-                    train_targets = np.add(replay_rewards, np.multiply(set.gamma, nxt_rewards))
+                    train_targets = replay_rewards + (nxt_rewards * set.gamma)
                     
                     #print("replay_rewards\n", replay_rewards[0])
                     #print("nxt_rewards\n", nxt_rewards[0])
@@ -157,7 +164,7 @@ class Train() :
                     #print("loss: ", loss)
                     
                 if set.steps_update_target > 0 and n % set.steps_update_target == 0 and n > set.train_thrshld :
-                    print("assign Qtarget")
+                    #print("assign Qtarget")
                     self.Q_target.set_weights(self.Q.get_weights())
                     self.Q_target.save_weights("Q_target_weight.h5")
                     
@@ -232,7 +239,10 @@ class Train() :
             nxt_shot = self.get_screenshot()
             cur_reward = stateQueue.calReward(cur_shot, nxt_shot)
             #print(cur_action, ",", cur_reward)
-            if cur_reward == "stuck" : break
+            if cur_reward == "stuck" :
+                print("at step", n)
+                screenshot(region = GameRegion).save("stuck_at_random.png")
+                break
             stateQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
             total_reward += cur_reward
         
@@ -251,8 +261,10 @@ class Train() :
 if __name__ == '__main__' :
     train = Train()
     train.count_down(3)
-    #train.random_action(128)
+    starttime = datetime.now()
+    #train.random_action(2500)
     train.run()
-    train.eval("Q_target_weight.h5")
+    print(datetime.now() - starttime)
+    #train.eval("Q_target_weight.h5")
     
 
