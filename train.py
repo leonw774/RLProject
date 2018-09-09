@@ -21,7 +21,7 @@ class Train() :
         self.Q.summary()
         self.Q.compile(loss = "mse", optimizer = set.model_optimizer)
         
-        if use_model :
+        if use_weight_file :
             self.Q.load_weights(use_weight_file)
         
         if set.steps_update_target > 0 :
