@@ -28,29 +28,29 @@ class StepQueue() :
     def getLength(self) :
         return len(self.scrshotList)
             
-    def getStepsAsArray(self, beg, size) :
+    def getStepsAsArray(self, beg, size = 1) :
         to = beg + size
         return np.array(self.scrshotList[beg:to]), np.array(self.actionList[beg:to]), np.array(self.rewardList[beg:to]), np.array(self.nxtScrshotsList[beg:to])
         
-    def getScrshotAsArray(self, beg, size) :
+    def getScrshotAsArray(self, beg, size = 1) :
         try :
             return np.array(self.scrshotList[beg : beg + size])
         except :
             print("Out of Boundary Error")
     
-    def getActionAsArray(self, beg, size) :
+    def getActionAsArray(self, beg, size = 1) :
         try :
             return np.array(self.actionList[beg : beg + size])
         except :
             print("Out of Boundary Error")
     
-    def getRewardAsArray(self, beg, size) :
+    def getRewardAsArray(self, beg, size = 1) :
         try :
             return np.array(self.rewardList[beg : beg + size])
         except :
             print("Out of Boundary Error")
     
-    def getNxtScrshotAsArray(self, beg, size) :
+    def getNxtScrshotAsArray(self, beg, size = 1) :
         try :
             return np.array(self.nxtScrshotsList[beg : beg + size])
         except :

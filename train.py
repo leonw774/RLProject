@@ -1,3 +1,4 @@
+import sys
 import random
 import math
 import numpy as np
@@ -16,17 +17,18 @@ from QNet import QNet
 class Train() :
     
     def __init__(self, use_weight_file = None) :
-        self.directInput = Keys()
+        self.directInput = Keys()        
         self.Q = QNet(set.model_input_shape, set.actions_num)
         self.Q.summary()
         self.Q.compile(loss = "mse", optimizer = set.model_optimizer)
         
-        if use_model :
+        if use_weight_file :
             self.Q.load_weights(use_weight_file)
         
         if set.steps_update_target > 0 :
             self.Q_target = QNet(set.model_input_shape, set.actions_num)
             self.Q_target.set_weights(self.Q.get_weights())
+            
         self.A = []
         for i in range(set.actions_num) :
             action_onehot = np.zeros((1, set.actions_num))
@@ -91,9 +93,23 @@ class Train() :
         sleep(set.do_control_pause)
     # end def do_control()
     
+    def click_newgame(self) :
+        # click "NEW GAME"
+        click(GameRegion[0] + GameRegion[2] * 0.66, GameRegion[1] + GameRegion[3] * 0.36)
+        sleep(7)
+    
+    def click_quitgame(self) :
+        sleep(0.1)
+        # push ESC
+        self.directInput.directKey("ESC")
+        sleep(0.1)
+        # click "QUIT"
+        click(GameRegion[0] + GameRegion[2] * 0.21, GameRegion[1] + GameRegion[3] * 0.96)
+        sleep(7)
+    
     def run(self) :
         '''
-        We would train Q, at time t, as:
+        We will train Q, at time t, as:
             y_pred = Q([state_t, a_t])
             y_true = r_t + gamma * max(Q_target([state_t, for a in A]))
         update Q's weight in mse
@@ -102,9 +118,7 @@ class Train() :
         
         for e in range(set.epoches) :
             
-            # click "NEW GAME"
-            click(GameRegion[0] + GameRegion[2] * 0.66, GameRegion[1] + GameRegion[3] * 0.36)
-            sleep(7)
+            self.click_newgame()
             
             stepQueue = StepQueue()
             total_reward = 0
@@ -173,13 +187,7 @@ class Train() :
             del stepQueue
             
             # Restart Game...
-            sleep(0.1)
-            # push ESC
-            self.directInput.directKey("ESC")
-            sleep(0.1)
-            # click "QUIT"
-            click(GameRegion[0] + GameRegion[2] * 0.21, GameRegion[1] + GameRegion[3] * 0.96)
-            sleep(7)
+            self.click_quitgame()
             
         # end for(epoches)
         
@@ -192,8 +200,7 @@ class Train() :
         self.Q.load_weights(model_weight_name)
         
         # click "NEW GAME"
-        click(GameRegion[0] + GameRegion[2] * 0.66, GameRegion[1] + GameRegion[3] * 0.36)
-        sleep(7)
+        self.click_newgame()
         
         stepQueue = stepQueue()
         totalReward = 0
@@ -218,18 +225,13 @@ class Train() :
         screenshot(region = GameRegion).save("eval_scrshot.png")
         
         # Exit Game...
-        # push ESC
-        self.directInput.directKey("ESC")
-        sleep(0.1)
-        # click "QUIT"
-        click(GameRegion[0] + GameRegion[2] * 0.21, GameRegion[1] + GameRegion[3] * 0.96)
+        self.click_quitgame()
 
     # end def eval
     
     def random_action(self, times) :
         # click "NEW GAME"
-        click(GameRegion[0] + GameRegion[2] * 0.66, GameRegion[1] + GameRegion[3] * 0.36)
-        sleep(7)
+        self.click_newgame()
         stepQueue = stepQueue()
         total_reward = 0
         for n in range(times) :
@@ -249,11 +251,7 @@ class Train() :
         del stepQueue
         print("eval end, totalReward:", total_reward)
         # Exit Game...
-        # push ESC
-        self.directInput.directKey("ESC")
-        sleep(0.1)
-        # click "QUIT"
-        click(GameRegion[0] + GameRegion[2] * 0.21, GameRegion[1] + GameRegion[3] * 0.96)
+        self.click_quitgame()
     # end def
     
 # end class Train
