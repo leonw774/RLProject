@@ -105,9 +105,7 @@ class StepQueue() :
             if set.use_compare_block and d > set.no_move_thrshld and not OH_NO_YOURE_NOT_MOVING :
                 # make compare_blocks
                 # hack from stackoverflow :
-                compare_blocks = cur_scrshot.reshape(block_h, set.block_side_num, -1, set.block_side_num)
-                                            .swapaxes(1,2)
-                                            .reshape(-1, set.block_side_num, set.block_side_num)
+                compare_blocks = cur_scrshot.reshape(block_h, set.block_side_num, -1, set.block_side_num).swapaxes(1,2).reshape(-1, set.block_side_num, set.block_side_num)
                 
                 compare_result_array = np.full((set.block_num), 2147483648)
                 for n in range(set.block_num) :
