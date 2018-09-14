@@ -6,10 +6,10 @@ from PIL import Image
 from time import sleep
 from datetime import datetime, timedelta
 from pyautogui import click, screenshot
+from win32 import win32gui
 from keras.models import Model
 
 from setting import TrainingSetting as set
-from setting import GameRegion
 from stepqueue import StepQueue
 from directinputs import Keys
 from QNet import QNet
@@ -17,7 +17,10 @@ from QNet import QNet
 class Train() :
     
     def __init__(self, use_weight_file = None) :
-        self.directInput = Keys()        
+        
+        self.GameRegion = self.get_game_region("Getting Over It")
+        
+        self.directInput = Keys()
         self.Q = QNet(set.model_input_shape, set.actions_num)
         self.Q.summary()
         self.Q.compile(loss = "mse", optimizer = set.model_optimizer)
@@ -35,6 +38,24 @@ class Train() :
             action_onehot[0, i] = 1
             self.A.append(action_onehot)
     
+    def get_game_region(self, title) :
+        if title :
+            gamewin = win32gui.FindWindow(None, title)
+            if not gamewin:
+                raise Exception('window title not found')
+            #get the bounding box of the window
+            x1, y1, x2, y2 = win32gui.GetWindowRect(gamewin)
+            
+            y1 += 50 # get rid of window bar
+            y2 -= 10
+            x1 += 10
+            x2 -= 10
+            
+            return (x1, y1, (x2 - x1 + 1), (y2 - y1 + 1))
+        else :
+            raise Exception("no window title was given.")
+    # end get_game_region
+    
     def count_down(self, cd) :
         for i in range(cd) :
             print(cd - i)
@@ -45,10 +66,10 @@ class Train() :
         array_scrshot = np.zeros(set.scrshot_shape)
         while(True) :
             if set.color_size == 1 :
-                scrshot = (screenshot(region = GameRegion)).convert('L').resize(set.scrshot_resize, resample = Image.NEAREST)
+                scrshot = (screenshot(region = self.GameRegion)).convert('L').resize(set.scrshot_resize, resample = Image.NEAREST)
                 array_scrshot = np.reshape(np.array(scrshot) / 255.5, set.scrshot_shape)
             elif set.color_size == 3 :
-                scrshot = (screenshot(region = GameRegion)).convert('RGB').resize(set.scrshot_resize, resample = Image.NEAREST)
+                scrshot = (screenshot(region = self.GameRegion)).convert('RGB').resize(set.scrshot_resize, resample = Image.NEAREST)
                 array_scrshot[0] = np.array(scrshot) / 255.5
             else :
                 raise Exception("color_size isn't right.")
@@ -60,7 +81,7 @@ class Train() :
     # end def get_screenshot
     
     def add_noise(self, noisy_scrshot) :
-        noisy_scrshot += np.random.uniform(low = -set.noise_range, high = set.noise_range, size = set.scrshot_shape)
+        noisy_scrshot += np.random.uniform(low = -set.noise_range, high = set.noise_range, size = noisy_scrshot.shape)
         noisy_scrshot[noisy_scrshot > 1.0] = 1.0
         noisy_scrshot[noisy_scrshot < 0.0] = 0.0
         return noisy_scrshot
@@ -95,19 +116,19 @@ class Train() :
     
     def click_newgame(self) :
         # click "NEW GAME"
-        click(GameRegion[0] + GameRegion[2] * 0.66, GameRegion[1] + GameRegion[3] * 0.36)
+        click(self.GameRegion[0] + self.GameRegion[2] * 0.66, self.GameRegion[1] + self.GameRegion[3] * 0.36)
         sleep(7)
     
     def click_quitgame(self) :
-        sleep(0.1)
+        sleep(0.2)
         # push ESC
         self.directInput.directKey("ESC")
-        sleep(0.1)
+        sleep(0.2)
         # click "QUIT"
-        click(GameRegion[0] + GameRegion[2] * 0.21, GameRegion[1] + GameRegion[3] * 0.96)
+        click(self.GameRegion[0] + self.GameRegion[2] * 0.21, self.GameRegion[1] + self.GameRegion[3] * 0.95)
         sleep(7)
     
-    def run(self) :
+    def fit(self) :
         '''
         We will train Q, at time t, as:
             y_pred = Q([state_t, a_t])
@@ -122,16 +143,18 @@ class Train() :
             
             stepQueue = StepQueue()
             total_reward = 0
-            cur_shot = self.get_screenshot() # as pre_shot
+            cur_scrshots = np.zeros((1, set.scrshot_h, set.scrshot_w, set.color_size * set.scrshot_n))
 
             for n in range(set.steps_epoch) :
-                pre_shot = cur_shot
                 cur_shot = self.get_screenshot()
+                cur_scrshots[:,:,:, : -set.color_size] = cur_scrshots[:,:,:, set.color_size: ] # dequeue
+                cur_scrshots[:,:,:, -set.color_size : ] = cur_shot # enqueue
+
                 # make action
-                if random.random() < max(set.eps_min, set.epsilon * (set.eps_decay ** e)):
+                if n <= set.scrshot_n or random.random() < max(set.eps_min, set.epsilon * (set.eps_decay ** e)) :
                     cur_action = random.randrange(set.actions_num)
                 else :
-                    cur_action = np.argmax(self.Q.predict([self.add_noise(pre_shot), self.add_noise(cur_shot)]))
+                    cur_action = np.argmax(self.Q.predict(self.add_noise(cur_scrshots)))
                 
                 self.do_control(cur_action)
                 
@@ -140,7 +163,7 @@ class Train() :
                 #print(cur_action, ",", cur_reward)
                 if cur_reward == "stuck" :
                     print("at step", n)
-                    screenshot(region = GameRegion).save("stuck_at_epoch" + str(e) + ".png")
+                    screenshot(region = self.GameRegion).save("stuck_at_epoch" + str(e) + ".png")
                     break
                 
                 total_reward += cur_reward
@@ -148,33 +171,34 @@ class Train() :
                 
                 if stepQueue.getLength() > set.train_size and n > set.train_thrshld and n % set.steps_train == 0 :
                     # Experience Replay
-                    r = random.randint(1, stepQueue.getLength() - set.train_size)
-                    input_cur_scrshots, input_actions, rewards, train_nxt_shots = stepQueue.getStepsAsArray(r, set.train_size)
-                    input_pre_scrshots = stepQueue.getScrshotAsArray(r - 1, set.train_size)
+                    random_step = random.randint(1, stepQueue.getLength() - set.train_size)
+                    train_cur_scrshots, train_actions, train_rewards, train_nxt_shots = stepQueue.getStepsAsArray(random_step, set.train_size)
+                    train_input_scrshots = np.zeros((set.train_size, set.scrshot_h, set.scrshot_w, set.color_size * set.scrshot_n))
                     
                     # make replay reward array
                     replay_rewards = np.zeros((set.train_size, set.actions_num))
                     for j in range(set.train_size) :
-                        replay_rewards[j, int(input_actions[j])] = rewards[j]
+                        replay_rewards[j, int(train_actions[j])] = train_rewards[j]
                     
-                    # make next predicted reward array
+                    # make next predicted reward array and train input array at same time
                     nxt_rewards = np.zeros((set.train_size, set.actions_num))
                     for j in range(set.train_size) :
-                        this_nxt_shots = self.add_noise(np.reshape(train_nxt_shots[j], set.scrshot_shape))
-                        this_cur_shots = self.add_noise(np.reshape(input_cur_scrshots[j], set.scrshot_shape))
-                        #print(input_actions[j])
+                        train_input_scrshots[j,:,:, : -set.color_size] = stepQueue.getScrshotAsArray(random_step + j - set.scrshot_n, set.scrshot_n - 1)
+                        train_input_scrshots[j,:,:, -set.color_size : ] = train_cur_scrshots[j]
+                        train_input_scrshots[j] = self.add_noise(train_input_scrshots[j])
+                        this_predict_reward_input = train_input_scrshots[j].reshape((1, set.scrshot_h, set.scrshot_w, set.scrshot_n*set.color_size))
                         if set.steps_update_target > 0 :
-                            nxt_rewards[j] = self.Q.predict([this_cur_shots, this_nxt_shots])
+                            nxt_rewards[j] = self.Q.predict(this_predict_reward_input)
                         else :
-                            nxt_rewards[j] = self.Q_target.predict([this_cur_shots, this_nxt_shots])
+                            nxt_rewards[j] = self.Q_target.predict(this_predict_reward_input)
                         
-                    train_targets = replay_rewards + (nxt_rewards * set.gamma)
+                    train_targets_rewards = replay_rewards + (nxt_rewards * set.gamma)
                     
                     #print("replay_rewards\n", replay_rewards[0])
                     #print("nxt_rewards\n", nxt_rewards[0])
                     #print("train_targets\n", train_targets[0])
                     
-                    loss = self.Q.train_on_batch([input_pre_scrshots, input_cur_scrshots], train_targets)
+                    loss = self.Q.train_on_batch(train_input_scrshots, train_targets_rewards)
                     #print("loss: ", loss)
                     
                 if set.steps_update_target > 0 and n % set.steps_update_target == 0 and n > set.train_thrshld :
@@ -184,7 +208,7 @@ class Train() :
                     
                 # end for(STEP_PER_EPOCH)  
             print("end epoch", e, "total_reward:", total_reward)
-            del stepQueue
+            stepQueue.clear()
             
             # Restart Game...
             self.click_quitgame()
@@ -193,7 +217,7 @@ class Train() :
         
         self.Q_target.save_weights("Q_target_weight.h5")
         
-    # end def run
+    # end def fit
     
     def eval(self, model_weight_name) :
         print("eval begin for:", model_weight_name)
@@ -202,17 +226,21 @@ class Train() :
         # click "NEW GAME"
         self.click_newgame()
         
-        stepQueue = stepQueue()
-        totalReward = 0
-        cur_shot = self.get_screenshot()
+        stepQueue = StepQueue()
+        total_reward = 0
+        cur_scrshots = np.zeros((1, set.scrshot_h, set.scrshot_w, set.color_size * set.scrshot_n))
         for n in range(set.steps_test) :
-            pre_shot = cur_shot
             cur_shot = self.get_screenshot()
-            if random.random() < set.eps_test :
+            cur_scrshots[:,:,:, : -set.color_size] = cur_scrshots[:,:,:, set.color_size: ] # dequeue
+            cur_scrshots[:,:,:, -set.color_size : ] = cur_shot # enqueue
+            
+            if n <= set.scrshot_n or random.random() < set.eps_test :
                 cur_action = random.randrange(set.actions_num)
             else :
                 cur_action = np.argmax(self.Q.predict([self.add_noise(pre_shot), self.add_noise(cur_shot)]))
-
+            
+            self.click_newgame()
+                
             self.do_control(cur_action)
             nxt_shot = self.get_screenshot()
             cur_reward = stepQueue.calReward(cur_shot, nxt_shot) # pre, cur
@@ -222,7 +250,7 @@ class Train() :
         
         del stepQueue
         print("eval end, totalReward:", totalReward)
-        screenshot(region = GameRegion).save("eval_scrshot.png")
+        screenshot(region = self.GameRegion).save("eval_scrshot.png")
         
         # Exit Game...
         self.click_quitgame()
@@ -243,7 +271,7 @@ class Train() :
             #print(cur_action, ",", cur_reward)
             if cur_reward == "stuck" :
                 print("at step", n)
-                screenshot(region = GameRegion).save("stuck_at_random.png")
+                screenshot(region = self.GameRegion).save("stuck_at_random.png")
                 break
             stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
             total_reward += cur_reward
@@ -261,7 +289,7 @@ if __name__ == '__main__' :
     train.count_down(3)
     starttime = datetime.now()
     #train.random_action(2500)
-    train.run()
+    train.fit()
     print(datetime.now() - starttime)
     #train.eval("Q_target_weight.h5")
     

@@ -24,6 +24,12 @@ class StepQueue() :
         self.actionList.append(action) # int
         self.rewardList.append(reward) # float
         self.nxtScrshotsList.append(nxt_scrshot[0]) # np array
+    
+    def clear(self) :
+        self.scrshotList = [] 
+        self.actionList = []
+        self.rewardList = []
+        self.nxtScrshotsList = []
         
     def getLength(self) :
         return len(self.scrshotList)

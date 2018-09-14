@@ -1,5 +1,9 @@
-from train import Train
+import sys
+import train
 
-train = Train()
+train = train.Train()
 train.count_down(3)
-train.eval("Q_target_weight.h5")
+if sys.argv[1] != None :
+    train.eval(sys.argv[1])
+else :
+    train.eval("Q_target_weight.h5")
