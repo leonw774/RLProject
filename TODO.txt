@@ -1,6 +1,0 @@
-﻿
-- 寫出算獎勵的function
-
-- 將Q建成論文裡的架構試一次
-
-- Q或許可以用LSTM Convolution!?!?
