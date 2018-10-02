@@ -16,8 +16,8 @@ class StepQueue() :
             self.rewardList.pop(0)
             self.nxtScrshotsList.pop(0)
         '''
-        if (scrshot.shape != set.scrshot_shape) or (nxt_scrshot.shape != set.scrshot_shape) :
-            print("scrshot shape no good: Received", scrshot.shape, " but ", set.scrshot_shape, " is expected.")
+        if (scrshot.shape != set.shot_shape) or (nxt_scrshot.shape != set.shot_shape) :
+            print("scrshot shape no good: Received", scrshot.shape, " but ", set.shot_shape, " is expected.")
             return
         '''
         self.scrshotList.append(scrshot[0]) # np array
@@ -38,7 +38,7 @@ class StepQueue() :
         to = beg + size
         return np.array(self.scrshotList[beg:to]), np.array(self.actionList[beg:to]), np.array(self.rewardList[beg:to]), np.array(self.nxtScrshotsList[beg:to])
         
-    def getScrshotAsArray(self, beg, size = 1) :
+    def getShotsAsArray(self, beg, size = 1) :
         try :
             return np.array(self.scrshotList[beg : beg + size])
         except :
@@ -56,7 +56,7 @@ class StepQueue() :
         except :
             print("Out of Boundary Error")
     
-    def getNxtScrshotAsArray(self, beg, size = 1) :
+    def getNxtShotsAsArray(self, beg, size = 1) :
         try :
             return np.array(self.nxtScrshotsList[beg : beg + size])
         except :
@@ -117,8 +117,8 @@ class StepQueue() :
                 for n in range(set.block_num) :
                     i = 0
                     j = 0
-                    while(i+block_h < set.scrshot_h) :
-                        while(j+block_w < set.scrshot_w) :
+                    while(i+block_h < set.shot_h) :
+                        while(j+block_w < set.shot_w) :
                             compare_result_array[n] = min(
                                 compare_result_array[n],
                                 np.sum(

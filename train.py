@@ -63,13 +63,13 @@ class Train() :
             
     def get_screenshot(self, num = 1, savefile = None) :
         sleep(set.scrshot_intv_time)
-        array_scrshot = np.zeros(set.scrshot_shape)
+        array_scrshot = np.zeros(set.shot_shape)
         while(True) :
             if set.color_size == 1 :
-                scrshot = (screenshot(region = self.GameRegion)).convert('L').resize(set.scrshot_resize, resample = Image.NEAREST)
-                array_scrshot = np.reshape(np.array(scrshot) / 255.5, set.scrshot_shape)
+                scrshot = (screenshot(region = self.GameRegion)).convert('L').resize(set.shot_resize, resample = Image.NEAREST)
+                array_scrshot = np.reshape(np.array(scrshot) / 255.5, set.shot_shape)
             elif set.color_size == 3 :
-                scrshot = (screenshot(region = self.GameRegion)).convert('RGB').resize(set.scrshot_resize, resample = Image.NEAREST)
+                scrshot = (screenshot(region = self.GameRegion)).convert('RGB').resize(set.shot_resize, resample = Image.NEAREST)
                 array_scrshot[0] = np.array(scrshot) / 255.5
             else :
                 raise Exception("color_size isn't right.")
@@ -144,18 +144,18 @@ class Train() :
             
             stepQueue = StepQueue()
             total_reward = 0
-            cur_scrshots = np.zeros((1, set.scrshot_h, set.scrshot_w, set.color_size * set.scrshot_n))
+            input_shots = np.zeros((1, set.shot_h, set.shot_w, set.color_size * set.shot_n))
 
             for n in range(set.steps_epoch) :
                 cur_shot = self.get_screenshot()
-                cur_scrshots[:,:,:, : -set.color_size] = cur_scrshots[:,:,:, set.color_size: ] # dequeue
-                cur_scrshots[:,:,:, -set.color_size : ] = cur_shot # enqueue
+                input_shots[:,:,:, : -set.color_size] = input_shots[:,:,:, set.color_size : ] # dequeue
+                input_shots[:,:,:, -set.color_size : ] = cur_shot # enqueue
 
                 # make action
-                if n <= set.scrshot_n or random.random() < max(set.eps_min, set.epsilon * (set.eps_decay ** e)) :
+                if n <= set.shot_n or random.random() < max(set.eps_min, set.epsilon * (set.eps_decay ** e)) :
                     cur_action = random.randrange(set.actions_num)
                 else :
-                    cur_action = np.argmax(self.Q.predict(self.add_noise(cur_scrshots)))
+                    cur_action = np.argmax(self.Q.predict(self.add_noise(input_shots)))
                 
                 self.do_control(cur_action)
                 
@@ -172,9 +172,9 @@ class Train() :
                 
                 if stepQueue.getLength() > set.train_size and n > set.train_thrshld and n % set.steps_train == 0 :
                     # Experience Replay
-                    random_step = random.randint(set.scrshot_n + 1, stepQueue.getLength() - set.train_size)
-                    train_cur_scrshots, train_actions, train_rewards, train_nxt_shots = stepQueue.getStepsAsArray(random_step, set.train_size)
-                    train_input_scrshots = np.zeros((set.train_size, set.scrshot_h, set.scrshot_w, set.color_size * set.scrshot_n))
+                    random_step = random.randint(set.shot_n + 1, stepQueue.getLength() - set.train_size)
+                    train_cur_shots, train_actions, train_rewards, train_nxt_shots = stepQueue.getStepsAsArray(random_step, set.train_size)
+                    train_input_shots = np.zeros((set.train_size, set.shot_h, set.shot_w, set.color_size * set.shot_n))
                     
                     # make replay reward array
                     replay_rewards = np.zeros((set.train_size, set.actions_num))
@@ -184,10 +184,13 @@ class Train() :
                     # make next predicted reward array and train input array at same time
                     nxt_rewards = np.zeros((set.train_size, set.actions_num))
                     for j in range(set.train_size) :
-                        train_input_scrshots[j,:,:, : -set.color_size] = stepQueue.getScrshotAsArray(random_step + j - set.scrshot_n, set.scrshot_n - 1)
-                        train_input_scrshots[j,:,:, -set.color_size : ] = train_cur_scrshots[j]
-                        train_input_scrshots[j] = self.add_noise(train_input_scrshots[j])
-                        this_predict_reward_input = train_input_scrshots[j].reshape((1, set.scrshot_h, set.scrshot_w, set.scrshot_n*set.color_size))
+                        if j == 0 :
+                            train_input_shots[j,:,:, : -set.color_size] = stepQueue.getShotsAsArray(random_step - set.shot_n, set.shot_n - 1)
+                        else :
+                            train_input_shots[j,:,:, : -set.color_size] = train_input_shots[j - 1,:,:, set.color_size : ]
+                        train_input_shots[j,:,:, -set.color_size : ] = train_cur_shots[j]
+                        train_input_shots[j] = self.add_noise(train_input_shots[j])
+                        this_predict_reward_input = train_input_shots[j].reshape((1, set.shot_h, set.shot_w, set.shot_n*set.color_size))
                         if set.steps_update_target > 0 :
                             nxt_rewards[j] = self.Q.predict(this_predict_reward_input)
                         else :
@@ -199,7 +202,7 @@ class Train() :
                     #print("nxt_rewards\n", nxt_rewards[0])
                     #print("train_targets\n", train_targets[0])
                     
-                    loss = self.Q.train_on_batch(train_input_scrshots, train_targets_rewards)
+                    loss = self.Q.train_on_batch(train_input_shots, train_targets_rewards)
                     #print("loss: ", loss)
                     
                 if set.steps_update_target > 0 and n % set.steps_update_target == 0 and n > set.train_thrshld :
@@ -229,13 +232,13 @@ class Train() :
         
         stepQueue = StepQueue()
         total_reward = 0
-        cur_scrshots = np.zeros((1, set.scrshot_h, set.scrshot_w, set.color_size * set.scrshot_n))
+        input_shots = np.zeros((1, set.shot_h, set.shot_w, set.color_size * set.shot_n))
         for n in range(set.steps_test) :
             cur_shot = self.get_screenshot()
-            cur_scrshots[:,:,:, : -set.color_size] = cur_scrshots[:,:,:, set.color_size: ] # dequeue
-            cur_scrshots[:,:,:, -set.color_size : ] = cur_shot # enqueue
+            input_shots[:,:,:, : -set.color_size] = input_shots[:,:,:, set.color_size: ] # dequeue
+            input_shots[:,:,:, -set.color_size : ] = cur_shot # enqueue
             
-            if n <= set.scrshot_n or random.random() < set.eps_test :
+            if n <= set.shot_n or random.random() < set.eps_test :
                 cur_action = random.randrange(set.actions_num)
             else :
                 cur_action = np.argmax(self.Q.predict(self.add_noise(cur_scrshots)))

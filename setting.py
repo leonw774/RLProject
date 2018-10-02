@@ -4,10 +4,11 @@ from keras import optimizers
 class TrainingSetting() :
     
     # SCREENSHOTS SETTING
-    scrshot_n = 2
-    scrshot_w = 128
-    scrshot_h = 72
+    shot_n = 2
+    shot_w = 128
+    shot_h = 72
     color_size = 1
+<<<<<<< HEAD
     scrshot_shape = (1, scrshot_h, scrshot_w, color_size)
     scrshot_resize = (scrshot_w, scrshot_h)
     scrshot_intv_time = 0.01
@@ -28,8 +29,8 @@ class TrainingSetting() :
     use_compare_block = False
     block_side_num = 4
     block_num = block_side_num**2
-    compare_stride = max(scrshot_h // block_side_num, scrshot_w // block_side_num)
-    compare_block_size = (block_num, scrshot_h // block_side_num, scrshot_w // block_side_num, color_size)
+    compare_stride = max(shot_h // block_side_num, shot_w // block_side_num)
+    compare_block_size = (block_num, shot_h // block_side_num, shot_w // block_side_num, color_size)
     
     good_r = 1.0
     bad_r = 0.0
