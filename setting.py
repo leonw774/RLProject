@@ -8,9 +8,9 @@ class TrainingSetting() :
     shot_w = 128
     shot_h = 72
     color_size = 1
-    scrshot_shape = (1, shot_h, shot_w, color_size)
-    scrshot_resize = (shot_w, shot_h)
-    scrshot_intv_time = 0.01
+    shot_shape = (1, shot_h, shot_w, color_size)
+    shot_resize = (shot_w, shot_h)
+    shot_intv_time = 0.01
     noise_range = 0.03
 
     # Q NET SETTING

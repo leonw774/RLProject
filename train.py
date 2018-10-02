@@ -259,10 +259,10 @@ class Train() :
 
     # end def eval
     
-    def random_action(self, steps) :
+    def random_action(self, steps = None) :
         # click "NEW GAME"
         self.click_newgame()
-        stepQueue = stepQueue()
+        stepQueue = StepQueue()
         total_reward = 0
         if steps == None : steps = set.steps_test
         for n in range(steps) :
