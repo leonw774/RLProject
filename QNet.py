@@ -3,7 +3,6 @@ from keras.models import Model
 from keras.layers import Activation, Concatenate, Conv2D, Conv3D, Dense, Dropout, Flatten, SimpleRNN, Input, MaxPooling2D, MaxPooling3D, LeakyReLU
 
 # Q-network: guess how many score it will make
-<<<<<<< HEAD
 def QNet(scrshot_size, action_size) :
     input_scrshots = Input(scrshot_size) # screen shot image
     x = Conv2D(32, (8, 8), padding = "valid", activation = "relu")(input_scrshots)

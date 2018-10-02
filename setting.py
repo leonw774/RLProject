@@ -8,20 +8,19 @@ class TrainingSetting() :
     shot_w = 128
     shot_h = 72
     color_size = 1
-<<<<<<< HEAD
-    scrshot_shape = (1, scrshot_h, scrshot_w, color_size)
-    scrshot_resize = (scrshot_w, scrshot_h)
+    scrshot_shape = (1, shot_h, shot_w, color_size)
+    scrshot_resize = (shot_w, shot_h)
     scrshot_intv_time = 0.01
     noise_range = 0.03
 
     # Q NET SETTING
-    model_input_shape = (scrshot_h, scrshot_w, color_size * scrshot_n)
+    model_input_shape = (shot_h, shot_w, color_size * shot_n)
     model_optimizer = optimizers.RMSprop(lr = 0.0025)
 
     # REWARD SETTING
     gamma = 0.26894142137 # 1 / (1 + exp(1))
-    good_thrshld = scrshot_h * scrshot_w * color_size * (0.015 + 2 * noise_range) # 0.075
-    no_move_thrshld = scrshot_h * scrshot_w * color_size * 0.03125
+    good_thrshld = shot_h * shot_w * color_size * (0.015 + 2 * noise_range) # 0.075
+    no_move_thrshld = shot_h * shot_w * color_size * 0.03125
     
     stuck_countdown = 75
     stuck_thrshld = 50

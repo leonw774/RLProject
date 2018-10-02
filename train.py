@@ -259,18 +259,19 @@ class Train() :
 
     # end def eval
     
-    def random_action(self, times) :
+    def random_action(self, steps) :
         # click "NEW GAME"
         self.click_newgame()
         stepQueue = stepQueue()
         total_reward = 0
-        for n in range(times) :
+        if steps == None : steps = set.steps_test
+        for n in range(steps) :
             cur_shot = self.get_screenshot()
             cur_action = random.randrange(set.actions_num)
             self.do_control(cur_action)
             nxt_shot = self.get_screenshot()
             cur_reward = stepQueue.calReward(cur_shot, nxt_shot)
-            #print(cur_action, ",", cur_reward)
+            print(cur_action, ",", cur_reward)
             if cur_reward == "stuck" :
                 print("at step", n)
                 screenshot(region = self.GameRegion).save("stuck_at_random.png")
@@ -290,8 +291,8 @@ if __name__ == '__main__' :
     train = Train()
     train.count_down(3)
     starttime = datetime.now()
-    #train.random_action(2500)
-    train.fit()
+    train.random_action(500)
+    #train.fit()
     print(datetime.now() - starttime)
     train.eval("Q_target_model.h5")
     
