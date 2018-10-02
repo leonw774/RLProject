@@ -107,7 +107,7 @@ class StepQueue() :
                 return "stuck"
             
             # blocks image diff 
-            # this algorithm is bigO(n^3), very slow. Only use if computer is good
+            # this algorithm is bigO(n^3), very slow. Only use if CPU is good
             if set.use_compare_block and d > set.no_move_thrshld and not OH_NO_YOURE_NOT_MOVING :
                 # make compare_blocks
                 # hack from stackoverflow :
@@ -129,21 +129,25 @@ class StepQueue() :
                             )
                             j += set.compare_stride
                         i += set.compare_stride
-                # compare_result : 0 --> there is same(diff big), 1 --> there is no same(diff small)
-                block_diff = np.sum((compare_result_array < set.good_thrshld / set.block_num).astype(np.int))
+                # compare_result :
+                # 0 --> there is same (diff smaller then thresold)
+                # 1 --> there is no same (diff larger)
+                block_diff = np.sum((compare_result_array > set.good_thrshld / set.block_num).astype(np.int))
                 if block_diff < min_block_diff :
                     min_block_diff = block_diff
                     min_block_diff_dist = len(self.scrshotList) - this_step
+                    
+                # check again if is not moving
+                OH_NO_YOURE_NOT_MOVING = min_block_diff < set.block_side_num and min_block_diff_dist <= 2
             # end if block diff
         # end for step, scrshot
-        # check again if is not moving
-        OH_NO_YOURE_NOT_MOVING = min_full_diff_dist <= 2 or (min_block_diff < set.block_side_num and min_block_diff_dist <= 2)
         
-        # calculate score
+        # calculate score: if (min_diff > thresold) then 1 else (min_diff / thresold)
         if min_full_diff_dist > 0 :
-            full_score = min_full_diff / set.good_thrshld if min_full_diff < set.good_thrshld else 1
+            full_score = min_full_diff / set.good_thrshld if min_full_diff < set.good_thrshld else 1.0
         if min_block_diff_dist > 0 :
-            block_score = min_block_diff / set.block_num if min_block_diff < set.block_side_num * 2 else 1
+            block_score = min_block_diff / set.block_num if min_block_diff < set.block_side_num * 2 else 1.0
+        
         if full_score >= block_score :
             diff_score, diff_dist = full_score, min_full_diff_dist
         else :

@@ -7,7 +7,7 @@ from time import sleep
 from datetime import datetime, timedelta
 from pyautogui import click, screenshot
 from win32 import win32gui
-from keras.models import Model
+from keras.models import Model, load_model
 
 from setting import TrainingSetting as set
 from stepqueue import StepQueue
@@ -75,7 +75,7 @@ class Train() :
                 raise Exception("color_size isn't right.")
             if savefile : scrshot.save(savefile)
             if np.sum(array_scrshot) < 0.001 :
-                sleep(1.0)
+                sleep(2.0)
             else :
                 return array_scrshot
     # end def get_screenshot
@@ -92,12 +92,11 @@ class Train() :
         相對方向的滑動
         [slow moving x angle_num, fast moving x angle_num]
         '''
-        slow_distance = 2400 # pixels
+        slow_distance = 2500 # pixels
         fast_distance = 4000 # pixels
         slow_intv_distance = 5 # pixels
         fast_intv_distance = 30
         intv_time = 0.0025
-        
         
         if id < set.mouse_angle_devision :
             intv_distance, distance = slow_intv_distance, slow_distance
@@ -111,22 +110,24 @@ class Train() :
         for i in range(distance // intv_distance) :
             self.directInput.directMouse(offset_x, offset_y)
             sleep(intv_time)
+        
         sleep(set.do_control_pause)
     # end def do_control()
     
     def click_newgame(self) :
+        sleep(0.5)
         # click "NEW GAME"
         click(self.GameRegion[0] + self.GameRegion[2] * 0.66, self.GameRegion[1] + self.GameRegion[3] * 0.36)
-        sleep(7)
+        sleep(8)
     
     def click_quitgame(self) :
-        sleep(0.2)
+        sleep(0.5)
         # push ESC
         self.directInput.directKey("ESC")
-        sleep(0.2)
+        sleep(0.5)
         # click "QUIT"
         click(self.GameRegion[0] + self.GameRegion[2] * 0.21, self.GameRegion[1] + self.GameRegion[3] * 0.95)
-        sleep(7)
+        sleep(8)
     
     def fit(self) :
         '''
@@ -171,7 +172,7 @@ class Train() :
                 
                 if stepQueue.getLength() > set.train_size and n > set.train_thrshld and n % set.steps_train == 0 :
                     # Experience Replay
-                    random_step = random.randint(1, stepQueue.getLength() - set.train_size)
+                    random_step = random.randint(set.scrshot_n + 1, stepQueue.getLength() - set.train_size)
                     train_cur_scrshots, train_actions, train_rewards, train_nxt_shots = stepQueue.getStepsAsArray(random_step, set.train_size)
                     train_input_scrshots = np.zeros((set.train_size, set.scrshot_h, set.scrshot_w, set.color_size * set.scrshot_n))
                     
@@ -204,7 +205,7 @@ class Train() :
                 if set.steps_update_target > 0 and n % set.steps_update_target == 0 and n > set.train_thrshld :
                     #print("assign Qtarget")
                     self.Q_target.set_weights(self.Q.get_weights())
-                    self.Q_target.save_weights("Q_target_weight.h5")
+                    self.Q_target.save("Q_target_model.h5")
                     
                 # end for(STEP_PER_EPOCH)  
             print("end epoch", e, "total_reward:", total_reward)
@@ -215,13 +216,13 @@ class Train() :
             
         # end for(epoches)
         
-        self.Q_target.save_weights("Q_target_weight.h5")
+        self.Q_target.save("Q_target_model.h5")
         
     # end def fit
     
     def eval(self, model_weight_name) :
         print("eval begin for:", model_weight_name)
-        self.Q.load_weights(model_weight_name)
+        self.Q = load_model(model_weight_name)
         
         # click "NEW GAME"
         self.click_newgame()
@@ -237,9 +238,7 @@ class Train() :
             if n <= set.scrshot_n or random.random() < set.eps_test :
                 cur_action = random.randrange(set.actions_num)
             else :
-                cur_action = np.argmax(self.Q.predict([self.add_noise(pre_shot), self.add_noise(cur_shot)]))
-            
-            self.click_newgame()
+                cur_action = np.argmax(self.Q.predict(self.add_noise(cur_scrshots)))
                 
             self.do_control(cur_action)
             nxt_shot = self.get_screenshot()
@@ -249,7 +248,7 @@ class Train() :
             total_reward += cur_reward
         
         del stepQueue
-        print("eval end, totalReward:", totalReward)
+        print("eval end, total_reward:", total_reward)
         screenshot(region = self.GameRegion).save("eval_scrshot.png")
         
         # Exit Game...
@@ -291,6 +290,6 @@ if __name__ == '__main__' :
     #train.random_action(2500)
     train.fit()
     print(datetime.now() - starttime)
-    #train.eval("Q_target_weight.h5")
+    train.eval("Q_target_model.h5")
     
 
