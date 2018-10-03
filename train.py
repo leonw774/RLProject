@@ -62,7 +62,7 @@ class Train() :
             sleep(1.0)
             
     def get_screenshot(self, num = 1, savefile = None) :
-        sleep(set.scrshot_intv_time)
+        sleep(set.shot_intv_time)
         array_scrshot = np.zeros(set.shot_shape)
         while(True) :
             if set.color_size == 1 :
@@ -147,6 +147,8 @@ class Train() :
             input_shots = np.zeros((1, set.shot_h, set.shot_w, set.color_size * set.shot_n))
 
             for n in range(set.steps_epoch) :
+                if (n + 1) % (set.steps_epoch / 10) == 0 : print(".", end="")
+                
                 cur_shot = self.get_screenshot()
                 input_shots[:,:,:, : -set.color_size] = input_shots[:,:,:, set.color_size : ] # dequeue
                 input_shots[:,:,:, -set.color_size : ] = cur_shot # enqueue
@@ -241,7 +243,7 @@ class Train() :
             if n <= set.shot_n or random.random() < set.eps_test :
                 cur_action = random.randrange(set.actions_num)
             else :
-                cur_action = np.argmax(self.Q.predict(self.add_noise(cur_scrshots)))
+                cur_action = np.argmax(self.Q.predict(self.add_noise(input_shots)))
                 
             self.do_control(cur_action)
             nxt_shot = self.get_screenshot()

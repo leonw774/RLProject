@@ -3,7 +3,7 @@ import train
 
 t = train.Train()
 t.count_down(3)
-t.random_action()
+#t.random_action()
 if len(sys.argv) == 2 :
     t.eval(sys.argv[1])
 else :

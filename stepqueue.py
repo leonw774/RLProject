@@ -103,7 +103,7 @@ class StepQueue() :
             NOT_STUCK_COUNTDOWN -= 1
             
             if OH_NO_YOURE_STUCK > set.stuck_thrshld :
-                print("stuck")
+                print("stuck", end=""))
                 return "stuck"
             
             # blocks image diff 
@@ -155,6 +155,7 @@ class StepQueue() :
         diff_score *= set.good_r
         #print("full diff:", min_full_diff, ", block diff:", min_block_diff)             
         
+        # return fianl reward
         if not OH_NO_YOURE_NOT_MOVING :
             #print("is moving\ndiff_score", diff_score)
             score = diff_score - set.bad_decline_rate * diff_dist

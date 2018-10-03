@@ -22,8 +22,8 @@ class TrainingSetting() :
     good_thrshld = shot_h * shot_w * color_size * (0.015 + 2 * noise_range) # 0.075
     no_move_thrshld = shot_h * shot_w * color_size * 0.03125
     
-    stuck_countdown = 75
-    stuck_thrshld = 50
+    stuck_countdown = 90
+    stuck_thrshld = 60
     
     use_compare_block = False
     block_side_num = 4
@@ -33,7 +33,7 @@ class TrainingSetting() :
     
     good_r = 1.0
     bad_r = 0.0
-    bad_decline_rate = 0.1 # per step
+    bad_decline_rate = 0.0625 # per step
 
     # ACTION SETTING
     mouse_angle_devision = 16
@@ -47,8 +47,8 @@ class TrainingSetting() :
     # TRAINING SETTING
     epsilon = 1.0
     eps_min = 0.2
-    eps_decay = 0.9975
-    epoches = 200
+    eps_decay = 0.998
+    epoches = 400
     steps_epoch = 2500
     train_thrshld = 201
     steps_train = 4
