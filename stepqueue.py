@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 from setting import TrainingSetting as set
 
@@ -8,6 +9,7 @@ class StepQueue() :
         self.actionList = []
         self.rewardList = []
         self.nxtScrshotsList = []
+        self.actionsOccurrence = np.zeros(set.actions_num)
     
     def addStep(self, scrshot, action, reward, nxt_scrshot) :
         if len(self.scrshotList) + 1 == set.stepQueue_length_max :
@@ -24,12 +26,14 @@ class StepQueue() :
         self.actionList.append(action) # int
         self.rewardList.append(reward) # float
         self.nxtScrshotsList.append(nxt_scrshot[0]) # np array
+        self.actionsOccurrence[action] += 1 # record occurrence of actions
     
     def clear(self) :
         self.scrshotList = [] 
         self.actionList = []
         self.rewardList = []
         self.nxtScrshotsList = []
+        self.actionsOccurrence = np.zeros(set.actions_num)
         
     def getLength(self) :
         return len(self.scrshotList)
@@ -61,6 +65,9 @@ class StepQueue() :
             return np.array(self.nxtScrshotsList[beg : beg + size])
         except :
             print("Out of Boundary Error")
+    
+    def getActionsOccurrence(self) :
+        return self.actionsOccurrence
                       
     def calReward(self, pre_scrshot, cur_scrshot) :
         pre_scrshot = pre_scrshot[0] # before action
@@ -72,20 +79,22 @@ class StepQueue() :
         
         min_full_diff = 2147483648
         min_full_diff_dist = -1
+        full_score = -1
+        
         min_block_diff = 2147483648
         min_block_diff_dist = -1
-        
-        full_score = -1
         block_score = -1
         
-        OH_NO_YOURE_NOT_MOVING = np.sum(np.absolute(pre_scrshot - cur_scrshot)) < set.no_move_thrshld
+        OH_NO_YOURE_NOT_MOVING = False
         OH_NO_YOURE_STUCK = 0
-        NOT_STUCK_COUNTDOWN = set.stuck_countdown
+        STUCK_COUNTDOWN = set.stuck_countdown
         
         if set.use_compare_block :
             block_h = set.compare_block_size[1]
             block_w = set.compare_block_size[2]
             compare_blocks = np.zeros(set.compare_block_size)
+            
+        OH_NO_YOURE_NOT_MOVING = np.sum(np.absolute(pre_scrshot - cur_scrshot)) < set.no_move_thrshld
            
         # find the screenshot that is most similar: smallest diff
         for this_step, this_scrshot in enumerate(reversed(self.scrshotList)) :
@@ -96,14 +105,15 @@ class StepQueue() :
                 min_full_diff_dist = len(self.scrshotList) - this_step
             
             # stuck check
-            if d <= set.no_move_thrshld and NOT_STUCK_COUNTDOWN > 0 :
+            if d <= set.no_move_thrshld and STUCK_COUNTDOWN > 0 :
                 OH_NO_YOURE_STUCK += 1  
             else : 
                 OH_NO_YOURE_STUCK = 0
-            NOT_STUCK_COUNTDOWN -= 1
+            STUCK_COUNTDOWN -= 1
             
             if OH_NO_YOURE_STUCK > set.stuck_thrshld :
-                print("stuck", end=""))
+                sys.stdout.write("stuck")
+                sys.stdout.flush()
                 return "stuck"
             
             # blocks image diff 
@@ -158,7 +168,7 @@ class StepQueue() :
         # return fianl reward
         if not OH_NO_YOURE_NOT_MOVING :
             #print("is moving\ndiff_score", diff_score)
-            score = diff_score - set.bad_decline_rate * diff_dist
+            score = diff_score * (set.been_here_decline_rate ** diff_dist)
             return score if score > set.bad_r else set.bad_r
         else :
             #print("YOU SCREW")

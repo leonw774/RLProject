@@ -15,12 +15,12 @@ class TrainingSetting() :
 
     # Q NET SETTING
     model_input_shape = (shot_h, shot_w, color_size * shot_n)
-    model_optimizer = optimizers.RMSprop(lr = 0.0025)
+    model_optimizer = optimizers.sgd(lr = 0.1)
 
     # REWARD SETTING
-    gamma = 0.26894142137 # 1 / (1 + exp(1))
-    good_thrshld = shot_h * shot_w * color_size * (0.015 + 2 * noise_range) # 0.075
-    no_move_thrshld = shot_h * shot_w * color_size * 0.03125
+    gamma = 0.36787944117 # 1 / exp(1)
+    good_thrshld = shot_h * shot_w * color_size * (0.03 + 2 * noise_range) # 0.09
+    no_move_thrshld = shot_h * shot_w * color_size * 0.03
     
     stuck_countdown = 90
     stuck_thrshld = 60
@@ -33,7 +33,7 @@ class TrainingSetting() :
     
     good_r = 1.0
     bad_r = 0.0
-    bad_decline_rate = 0.0625 # per step
+    been_here_decline_rate = 0.8 # 0.0 ~ 1.0, per step
 
     # ACTION SETTING
     mouse_angle_devision = 16
@@ -47,13 +47,15 @@ class TrainingSetting() :
     # TRAINING SETTING
     epsilon = 1.0
     eps_min = 0.2
-    eps_decay = 0.998
-    epoches = 400
-    steps_epoch = 2500
+    eps_decay = 0.99
+    epoches = 500
+    steps_epoch = 1000
     train_thrshld = 201
     steps_train = 4
     train_size = 32
     steps_update_target = 200 # set to 0 to disable
+    
+    no_reward_countdown = train_thrshld + steps_update_target
     
     eps_test = 0.01
     steps_test = 500

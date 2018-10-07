@@ -127,7 +127,7 @@ class Train() :
         sleep(0.5)
         # click "QUIT"
         click(self.GameRegion[0] + self.GameRegion[2] * 0.21, self.GameRegion[1] + self.GameRegion[3] * 0.95)
-        sleep(8)
+        sleep(10)
     
     def fit(self) :
         '''
@@ -144,18 +144,27 @@ class Train() :
             
             stepQueue = StepQueue()
             total_reward = 0
+            no_reward_count = 0
+            this_epoch_epsilon = set.epsilon * (set.eps_decay ** e)
             input_shots = np.zeros((1, set.shot_h, set.shot_w, set.color_size * set.shot_n))
 
             for n in range(set.steps_epoch) :
-                if (n + 1) % (set.steps_epoch / 10) == 0 : print(".", end="")
+                if (n + 1) % (set.steps_epoch / 10) == 0 :
+                    sys.stdout.write(".")
+                    sys.stdout.flush()
                 
                 cur_shot = self.get_screenshot()
                 input_shots[:,:,:, : -set.color_size] = input_shots[:,:,:, set.color_size : ] # dequeue
                 input_shots[:,:,:, -set.color_size : ] = cur_shot # enqueue
 
                 # make action
-                if n <= set.shot_n or random.random() < max(set.eps_min, set.epsilon * (set.eps_decay ** e)) :
-                    cur_action = random.randrange(set.actions_num)
+                if n <= set.shot_n or random.random() < max(set.eps_min, this_epoch_epsilon) :
+                    if n == 0 :
+                        cur_action = random.randint(0, set.actions_num - 1)
+                    else :
+                        p_weight = n - stepQueue.getActionsOccurrence()
+                        p_weight = p_weight / p_weight.sum()
+                        cur_action = np.random.choice(np.arange(set.actions_num), p = p_weight)
                 else :
                     cur_action = np.argmax(self.Q.predict(self.add_noise(input_shots)))
                 
@@ -165,16 +174,22 @@ class Train() :
                 cur_reward = stepQueue.calReward(cur_shot, nxt_shot) # pre-action, after-action
                 #print(cur_action, ",", cur_reward)
                 if cur_reward == "stuck" :
-                    print("at step", n)
+                    sys.stdout.write(" at step " +  str(n) + ", ")
+                    sys.stdout.flush()
                     screenshot(region = self.GameRegion).save("stuck_at_epoch" + str(e) + ".png")
                     break
                 
                 total_reward += cur_reward
+                if cur_reward <= set.bad_r :
+                    no_reward_count += 1
+                if no_reward_count > set.no_reward_countdown :
+                    break;
+                
                 stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
                 
                 if stepQueue.getLength() > set.train_size and n > set.train_thrshld and n % set.steps_train == 0 :
                     # Experience Replay
-                    random_step = random.randint(set.shot_n + 1, stepQueue.getLength() - set.train_size)
+                    random_step = random.randint(set.shot_n + 1, stepQueue.getLength() - set.train_size - 1)
                     train_cur_shots, train_actions, train_rewards, train_nxt_shots = stepQueue.getStepsAsArray(random_step, set.train_size)
                     train_input_shots = np.zeros((set.train_size, set.shot_h, set.shot_w, set.color_size * set.shot_n))
                     
@@ -186,19 +201,20 @@ class Train() :
                     # make next predicted reward array and train input array at same time
                     nxt_rewards = np.zeros((set.train_size, set.actions_num))
                     for j in range(set.train_size) :
-                        if j == 0 :
+                        if j < set.shot_n - 1 :
                             train_input_shots[j,:,:, : -set.color_size] = stepQueue.getShotsAsArray(random_step - set.shot_n, set.shot_n - 1)
                         else :
                             train_input_shots[j,:,:, : -set.color_size] = train_input_shots[j - 1,:,:, set.color_size : ]
                         train_input_shots[j,:,:, -set.color_size : ] = train_cur_shots[j]
                         train_input_shots[j] = self.add_noise(train_input_shots[j])
-                        this_predict_reward_input = train_input_shots[j].reshape((1, set.shot_h, set.shot_w, set.shot_n*set.color_size))
+                        this_train_input_shots = train_input_shots[j].reshape((1, set.shot_h, set.shot_w, set.shot_n*set.color_size))
                         if set.steps_update_target > 0 :
-                            nxt_rewards[j] = self.Q.predict(this_predict_reward_input)
+                            nxt_rewards[j] = self.Q.predict(this_train_input_shots)
                         else :
-                            nxt_rewards[j] = self.Q_target.predict(this_predict_reward_input)
+                            nxt_rewards[j] = self.Q_target.predict(this_train_input_shots)
+                        nxt_rewards[j, int(train_actions[j])] *= set.gamma
                         
-                    train_targets_rewards = replay_rewards + (nxt_rewards * set.gamma)
+                    train_targets_rewards = replay_rewards + nxt_rewards
                     
                     #print("replay_rewards\n", replay_rewards[0])
                     #print("nxt_rewards\n", nxt_rewards[0])
@@ -243,7 +259,9 @@ class Train() :
             if n <= set.shot_n or random.random() < set.eps_test :
                 cur_action = random.randrange(set.actions_num)
             else :
-                cur_action = np.argmax(self.Q.predict(self.add_noise(input_shots)))
+                predict_Q = self.Q.predict(self.add_noise(input_shots))
+                #print(predict_Q)
+                cur_action = np.argmax(predict_Q)
                 
             self.do_control(cur_action)
             nxt_shot = self.get_screenshot()
@@ -293,9 +311,9 @@ if __name__ == '__main__' :
     train = Train()
     train.count_down(3)
     starttime = datetime.now()
-    train.random_action(500)
-    #train.fit()
+    train.fit()
     print(datetime.now() - starttime)
+    #train.random_action()
     train.eval("Q_target_model.h5")
     
 
