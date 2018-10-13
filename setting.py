@@ -7,20 +7,20 @@ class TrainingSetting() :
     shot_n = 2
     shot_w = 128
     shot_h = 72
-    color_size = 1
-    shot_shape = (1, shot_h, shot_w, color_size)
+    shot_c = 1
+    shot_shape = (1, shot_h, shot_w, shot_c)
     shot_resize = (shot_w, shot_h)
     shot_intv_time = 0.01
     noise_range = 0.03
 
     # Q NET SETTING
-    model_input_shape = (shot_h, shot_w, color_size * shot_n)
+    model_input_shape = (shot_h, shot_w, shot_c * shot_n)
     model_optimizer = optimizers.sgd(lr = 0.1)
 
     # REWARD SETTING
     gamma = 0.36787944117 # 1 / exp(1)
-    good_thrshld = shot_h * shot_w * color_size * (0.03 + 2 * noise_range) # 0.09
-    no_move_thrshld = shot_h * shot_w * color_size * 0.03
+    good_thrshld = shot_h * shot_w * shot_c * (0.03 + 2 * noise_range) # 0.09
+    no_move_thrshld = shot_h * shot_w * shot_c * 0.03125
     
     stuck_countdown = 90
     stuck_thrshld = 60
@@ -29,7 +29,7 @@ class TrainingSetting() :
     block_side_num = 4
     block_num = block_side_num**2
     compare_stride = max(shot_h // block_side_num, shot_w // block_side_num)
-    compare_block_size = (block_num, shot_h // block_side_num, shot_w // block_side_num, color_size)
+    compare_block_size = (block_num, shot_h // block_side_num, shot_w // block_side_num, shot_c)
     
     good_r = 1.0
     bad_r = 0.0
@@ -47,15 +47,15 @@ class TrainingSetting() :
     # TRAINING SETTING
     epsilon = 1.0
     eps_min = 0.2
-    eps_decay = 0.99
+    eps_decay = 0.996
     epoches = 500
     steps_epoch = 1000
-    train_thrshld = 201
-    steps_train = 4
-    train_size = 32
-    steps_update_target = 200 # set to 0 to disable
+    train_thrshld = 101
+    steps_train = 6
+    train_size = 64
+    steps_update_target = 100 # set to 0 to disable
     
-    no_reward_countdown = train_thrshld + steps_update_target
+    no_reward_countdown = train_thrshld + steps_update_target + 1
     
     eps_test = 0.01
     steps_test = 500

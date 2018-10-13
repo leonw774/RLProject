@@ -46,10 +46,13 @@ class Train() :
             #get the bounding box of the window
             x1, y1, x2, y2 = win32gui.GetWindowRect(gamewin)
             
-            y1 += 50 # get rid of window bar
-            y2 -= 10
-            x1 += 10
-            x2 -= 10
+            h_padding = (y2 - y1) * 0.1
+            w_padding = (x2 - x1) * 0.1
+            
+            y1 += h_padding # get rid of window bar
+            y2 -= h_padding
+            x1 += w_padding
+            x2 -= w_padding
             
             return (x1, y1, (x2 - x1 + 1), (y2 - y1 + 1))
         else :
@@ -65,14 +68,14 @@ class Train() :
         sleep(set.shot_intv_time)
         array_scrshot = np.zeros(set.shot_shape)
         while(True) :
-            if set.color_size == 1 :
+            if set.shot_c == 1 :
                 scrshot = (screenshot(region = self.GameRegion)).convert('L').resize(set.shot_resize, resample = Image.NEAREST)
                 array_scrshot = np.reshape(np.array(scrshot) / 255.5, set.shot_shape)
-            elif set.color_size == 3 :
+            elif set.shot_c == 3 :
                 scrshot = (screenshot(region = self.GameRegion)).convert('RGB').resize(set.shot_resize, resample = Image.NEAREST)
                 array_scrshot[0] = np.array(scrshot) / 255.5
             else :
-                raise Exception("color_size isn't right.")
+                raise Exception("shot_c isn't right.")
             if savefile : scrshot.save(savefile)
             if np.sum(array_scrshot) < 0.001 :
                 sleep(2.0)
@@ -92,11 +95,11 @@ class Train() :
         相對方向的滑動
         [slow moving x angle_num, fast moving x angle_num]
         '''
-        slow_distance = 2500 # pixels
-        fast_distance = 4000 # pixels
-        slow_intv_distance = 5 # pixels
-        fast_intv_distance = 30
-        intv_time = 0.0025
+        slow_distance = 2400 # pixels
+        fast_distance = 6000 # pixels
+        slow_intv_distance = 4 # pixels
+        fast_intv_distance = 32
+        intv_time = 0.001
         
         if id < set.mouse_angle_devision :
             intv_distance, distance = slow_intv_distance, slow_distance
@@ -117,7 +120,7 @@ class Train() :
     def click_newgame(self) :
         sleep(0.5)
         # click "NEW GAME"
-        click(self.GameRegion[0] + self.GameRegion[2] * 0.66, self.GameRegion[1] + self.GameRegion[3] * 0.36)
+        click(self.GameRegion[0] + self.GameRegion[2] * 0.70, self.GameRegion[1] + self.GameRegion[3] * 0.40)
         sleep(8)
     
     def click_quitgame(self) :
@@ -126,7 +129,7 @@ class Train() :
         self.directInput.directKey("ESC")
         sleep(0.5)
         # click "QUIT"
-        click(self.GameRegion[0] + self.GameRegion[2] * 0.21, self.GameRegion[1] + self.GameRegion[3] * 0.95)
+        click(self.GameRegion[0] + self.GameRegion[2] * 0.15, self.GameRegion[1] + self.GameRegion[3] * 1.05)
         sleep(10)
     
     def fit(self) :
@@ -145,8 +148,8 @@ class Train() :
             stepQueue = StepQueue()
             total_reward = 0
             no_reward_count = 0
-            this_epoch_epsilon = set.epsilon * (set.eps_decay ** e)
-            input_shots = np.zeros((1, set.shot_h, set.shot_w, set.color_size * set.shot_n))
+            this_epoch_epsilon = max(set.eps_min, set.epsilon * (set.eps_decay ** e), random.random())
+            input_shots = np.zeros((1, set.shot_h, set.shot_w, set.shot_c * set.shot_n))
 
             for n in range(set.steps_epoch) :
                 if (n + 1) % (set.steps_epoch / 10) == 0 :
@@ -154,11 +157,11 @@ class Train() :
                     sys.stdout.flush()
                 
                 cur_shot = self.get_screenshot()
-                input_shots[:,:,:, : -set.color_size] = input_shots[:,:,:, set.color_size : ] # dequeue
-                input_shots[:,:,:, -set.color_size : ] = cur_shot # enqueue
+                input_shots[:,:,:, : -set.shot_c] = input_shots[:,:,:, set.shot_c : ] # dequeue
+                input_shots[:,:,:, -set.shot_c : ] = cur_shot # enqueue
 
                 # make action
-                if n <= set.shot_n or random.random() < max(set.eps_min, this_epoch_epsilon) :
+                if n <= set.shot_n or random.random() < this_epoch_epsilon :
                     if n == 0 :
                         cur_action = random.randint(0, set.actions_num - 1)
                     else :
@@ -191,7 +194,7 @@ class Train() :
                     # Experience Replay
                     random_step = random.randint(set.shot_n + 1, stepQueue.getLength() - set.train_size - 1)
                     train_cur_shots, train_actions, train_rewards, train_nxt_shots = stepQueue.getStepsAsArray(random_step, set.train_size)
-                    train_input_shots = np.zeros((set.train_size, set.shot_h, set.shot_w, set.color_size * set.shot_n))
+                    train_input_shots = np.zeros((set.train_size, set.shot_h, set.shot_w, set.shot_c * set.shot_n))
                     
                     # make replay reward array
                     replay_rewards = np.zeros((set.train_size, set.actions_num))
@@ -202,12 +205,12 @@ class Train() :
                     nxt_rewards = np.zeros((set.train_size, set.actions_num))
                     for j in range(set.train_size) :
                         if j < set.shot_n - 1 :
-                            train_input_shots[j,:,:, : -set.color_size] = stepQueue.getShotsAsArray(random_step - set.shot_n, set.shot_n - 1)
+                            train_input_shots[j,:,:, : -set.shot_c] = stepQueue.getShotsAsArray(random_step - set.shot_n, set.shot_n - 1)
                         else :
-                            train_input_shots[j,:,:, : -set.color_size] = train_input_shots[j - 1,:,:, set.color_size : ]
-                        train_input_shots[j,:,:, -set.color_size : ] = train_cur_shots[j]
+                            train_input_shots[j,:,:, : -set.shot_c] = train_input_shots[j - 1,:,:, set.shot_c : ]
+                        train_input_shots[j,:,:, -set.shot_c : ] = train_cur_shots[j]
                         train_input_shots[j] = self.add_noise(train_input_shots[j])
-                        this_train_input_shots = train_input_shots[j].reshape((1, set.shot_h, set.shot_w, set.shot_n*set.color_size))
+                        this_train_input_shots = np.expand_dims(train_input_shots[j], axis = 0)
                         if set.steps_update_target > 0 :
                             nxt_rewards[j] = self.Q.predict(this_train_input_shots)
                         else :
@@ -250,11 +253,11 @@ class Train() :
         
         stepQueue = StepQueue()
         total_reward = 0
-        input_shots = np.zeros((1, set.shot_h, set.shot_w, set.color_size * set.shot_n))
+        input_shots = np.zeros((1, set.shot_h, set.shot_w, set.shot_c * set.shot_n))
         for n in range(set.steps_test) :
             cur_shot = self.get_screenshot()
-            input_shots[:,:,:, : -set.color_size] = input_shots[:,:,:, set.color_size: ] # dequeue
-            input_shots[:,:,:, -set.color_size : ] = cur_shot # enqueue
+            input_shots[:,:,:, : -set.shot_c] = input_shots[:,:,:, set.shot_c: ] # dequeue
+            input_shots[:,:,:, -set.shot_c : ] = cur_shot # enqueue
             
             if n <= set.shot_n or random.random() < set.eps_test :
                 cur_action = random.randrange(set.actions_num)
@@ -262,6 +265,7 @@ class Train() :
                 predict_Q = self.Q.predict(self.add_noise(input_shots))
                 #print(predict_Q)
                 cur_action = np.argmax(predict_Q)
+                print("choose", cur_action, "with max Q:", np.max(predict_Q))
                 
             self.do_control(cur_action)
             nxt_shot = self.get_screenshot()
