@@ -98,15 +98,15 @@ class StepQueue() :
         # find the screenshot that is most similar: smallest diff
         for this_step, this_scrshot in enumerate(reversed(self.scrshotList)) :
             # full image diff
-            d = np.sum(np.absolute(np.subtract(this_scrshot, cur_scrshot)))
-            
+            d = np.sum(np.absolute(np.subtract(this_scrshot, pre_scrshot)))
             if d <= min_pre_diff :
                 min_pre_diff = d
-                min_pre_diff_dist = len(self.scrshotList) - this_step
+                min_pre_diff_dist = this_step
             
+            d = np.sum(np.absolute(np.subtract(this_scrshot, cur_scrshot)))
             if d <= min_cur_diff :
                 min_cur_diff = d
-                min_cur_diff_dist = len(self.scrshotList) - this_step
+                min_cur_diff_dist = this_step
             
             # stuck check
             if d <= set.no_move_thrshld and STUCK_COUNTDOWN > 0 :
@@ -125,7 +125,7 @@ class StepQueue() :
         diff_score = (min_cur_diff / set.good_thrshld) if min_cur_diff < set.good_thrshld else 1.0
         
         diff_score *= set.good_r
-        #print("full diff:", min_cur_diff, ")             
+        print("min cur diff dist:", min_cur_diff_dist, "min pre diff dist", min_pre_diff_dist)          
         
         # return fianl reward
         if not OH_NO_YOURE_NOT_MOVING :
@@ -133,7 +133,7 @@ class StepQueue() :
             if min_cur_diff_dist < min_pre_diff_dist :
                 score = diff_score * (set.been_here_decline_rate)
             else :
-                score = diff_score * (set.been_here_decline_rate ** diff_dist)
+                score = diff_score * (set.been_here_decline_rate ** min_cur_diff_dist)
             return score if score > set.bad_r else set.bad_r
         else :
             #print("YOU SCREW")
@@ -219,7 +219,7 @@ class StepQueue() :
         # return fianl reward
         if not OH_NO_YOURE_NOT_MOVING :
             #print("is moving\ndiff_score", diff_score)
-            score = diff_score * (set.been_here_decline_rate ** diff_dist)
+            score = diff_score * (set.been_here_decline_rate ** min_block_diff_dist)
             return score if score > set.bad_r else set.bad_r
         else :
             #print("YOU SCREW")
