@@ -20,7 +20,7 @@ class TrainingSetting() :
     # REWARD SETTING
     gamma = 0.36787944117 # 1 / exp(1)
     good_thrshld = shot_h * shot_w * shot_c * (0.03 + 2 * noise_range) # 0.09
-    no_move_thrshld = shot_h * shot_w * shot_c * 0.03125
+    no_move_thrshld = shot_h * shot_w * shot_c * 0.03
     
     stuck_countdown = 90
     stuck_thrshld = 60
@@ -36,10 +36,10 @@ class TrainingSetting() :
     been_here_decline_rate = 0.8 # 0.0 ~ 1.0, per step
 
     # ACTION SETTING
-    mouse_angle_devision = 16
+    mouse_angle_devision = 12
     actions_num = mouse_angle_devision * 2
     # {slow moving, fast moving}
-    do_control_pause = 0.1
+    do_control_pause = 0.5
 
     # STEP QUEUE SETTING
     stepQueue_length_max = 10000 # set 0 to be no limit
@@ -47,15 +47,17 @@ class TrainingSetting() :
     # TRAINING SETTING
     epsilon = 1.0
     eps_min = 0.2
-    eps_decay = 0.996
+    eps_decay = 0.9975
+    random_epsilon = False
+    
     epoches = 500
     steps_epoch = 1000
     train_thrshld = 101
-    steps_train = 6
+    steps_train = 10
     train_size = 64
     steps_update_target = 100 # set to 0 to disable
     
-    no_reward_countdown = train_thrshld + steps_update_target + 1
+    no_reward_countdown = 250
     
     eps_test = 0.01
     steps_test = 500

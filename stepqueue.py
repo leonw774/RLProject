@@ -96,45 +96,51 @@ class StepQueue() :
         OH_NO_YOURE_NOT_MOVING = np.sum(np.absolute(pre_scrshot - cur_scrshot)) < set.no_move_thrshld
            
         # find the screenshot that is most similar: smallest diff
-        for this_step, this_scrshot in enumerate(reversed(self.scrshotList)) :
-            # full image diff
-            d = np.sum(np.absolute(np.subtract(this_scrshot, pre_scrshot)))
-            if d <= min_pre_diff :
-                min_pre_diff = d
-                min_pre_diff_dist = this_step
+        if not OH_NO_YOURE_NOT_MOVING :
+            for this_step, this_scrshot in enumerate(self.scrshotList) :
+                # full image diff
+                d_p = np.sum(np.absolute(this_scrshot - pre_scrshot))
+                if d_p <= min_pre_diff :
+                    min_pre_diff = d_p
+                    min_pre_diff_dist = len(self.scrshotList) - this_step
+                
+                d_c = np.sum(np.absolute(this_scrshot - cur_scrshot))
+                if d_c <= min_cur_diff :
+                    min_cur_diff = d_c
+                    min_cur_diff_dist = len(self.scrshotList) - this_step
             
-            d = np.sum(np.absolute(np.subtract(this_scrshot, cur_scrshot)))
-            if d <= min_cur_diff :
-                min_cur_diff = d
-                min_cur_diff_dist = this_step
+        # stuck check
+        if STUCK_COUNTDOWN > 0 :
+            for this_step, this_scrshot in enumerate(reversed(self.scrshotList)) :
+                if np.sum(np.absolute(this_scrshot - cur_scrshot)) <= set.no_move_thrshld :
+                    OH_NO_YOURE_STUCK += 1  
+                else : 
+                    OH_NO_YOURE_STUCK = 0
+                STUCK_COUNTDOWN -= 1
             
-            # stuck check
-            if d <= set.no_move_thrshld and STUCK_COUNTDOWN > 0 :
-                OH_NO_YOURE_STUCK += 1  
-            else : 
-                OH_NO_YOURE_STUCK = 0
-            STUCK_COUNTDOWN -= 1
-            
-            if OH_NO_YOURE_STUCK > set.stuck_thrshld :
-                sys.stdout.write("stuck")
-                sys.stdout.flush()
-                return "stuck"
-        # end for step, scrshot
-        
-        # calculate score: if (min_diff > thresold) then 1 else (min_diff / thresold)
-        diff_score = (min_cur_diff / set.good_thrshld) if min_cur_diff < set.good_thrshld else 1.0
-        
-        diff_score *= set.good_r
-        print("min cur diff dist:", min_cur_diff_dist, "min pre diff dist", min_pre_diff_dist)          
+                if OH_NO_YOURE_STUCK > set.stuck_thrshld :
+                    sys.stdout.write("stuck")
+                    sys.stdout.flush()
+                    return "stuck"
+        # end for step, scrshot   
         
         # return fianl reward
         if not OH_NO_YOURE_NOT_MOVING :
+            # calculate score: if (min_diff > thresold) then 1 else (min_diff / thresold)
+            diff_score = (min_cur_diff / set.good_thrshld) if min_cur_diff < set.good_thrshld else 1.0
+            diff_score *= set.good_r
+            
+            #print("min cur diff dist:", min_cur_diff_dist, "\nmin pre diff dist:", min_pre_diff_dist)
+            #print(diff_score)     
             #print("is moving\ndiff_score", diff_score)
-            if min_cur_diff_dist < min_pre_diff_dist :
-                score = diff_score * (set.been_here_decline_rate)
+            
+            if diff_score == 1.0 :
+                return 1.0
+            elif min_cur_diff_dist < min_pre_diff_dist :
+                score = diff_score * ((min_pre_diff_dist - min_cur_diff_dist) ** min_cur_diff_dist)
             else :
                 score = diff_score * (set.been_here_decline_rate ** min_cur_diff_dist)
-            return score if score > set.bad_r else set.bad_r
+            return score if score > set.bad_r + 1e-4 else set.bad_r
         else :
             #print("YOU SCREW")
             return set.bad_r

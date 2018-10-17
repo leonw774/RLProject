@@ -95,16 +95,17 @@ class Train() :
         相對方向的滑動
         [slow moving x angle_num, fast moving x angle_num]
         '''
-        slow_distance = 2400 # pixels
-        fast_distance = 6000 # pixels
-        slow_intv_distance = 4 # pixels
+        slow_distance = 2500 # pixels
+        fast_distance = 8000 # pixels
+        slow_intv_distance = 5 # pixels
         fast_intv_distance = 32
-        intv_time = 0.001
+        slow_intv_time = 0.002
+        fast_intv_time = 0.001
         
         if id < set.mouse_angle_devision :
-            intv_distance, distance = slow_intv_distance, slow_distance
+            intv_distance, distance, intv_time = slow_intv_distance, slow_distance, slow_intv_time
         else :
-            intv_distance, distance = fast_intv_distance, fast_distance
+            intv_distance, distance, intv_time = fast_intv_distance, fast_distance, fast_intv_time
         
         angle = 2 * math.pi * id / set.mouse_angle_devision
         offset_x = math.ceil(math.cos(angle) * intv_distance)
@@ -148,7 +149,9 @@ class Train() :
             stepQueue = StepQueue()
             total_reward = 0
             no_reward_count = 0
-            this_epoch_epsilon = max(set.eps_min, set.epsilon * (set.eps_decay ** e), random.random())
+            this_e_eps = max(set.eps_min, set.epsilon * (set.eps_decay ** e))
+            if set.random_epsilon : 
+                this_e_eps = max(this_e_eps, random.random())
             input_shots = np.zeros((1, set.shot_h, set.shot_w, set.shot_c * set.shot_n))
 
             for n in range(set.steps_epoch) :
@@ -161,7 +164,7 @@ class Train() :
                 input_shots[:,:,:, -set.shot_c : ] = cur_shot # enqueue
 
                 # make action
-                if n <= set.shot_n or random.random() < this_epoch_epsilon :
+                if n <= set.shot_n or random.random() < this_e_eps :
                     if n == 0 :
                         cur_action = random.randint(0, set.actions_num - 1)
                     else :
@@ -181,12 +184,14 @@ class Train() :
                     sys.stdout.flush()
                     screenshot(region = self.GameRegion).save("stuck_at_epoch" + str(e) + ".png")
                     break
-                
+                #print("cur_reward", cur_reward)
                 total_reward += cur_reward
                 if cur_reward <= set.bad_r :
                     no_reward_count += 1
-                if no_reward_count > set.no_reward_countdown :
-                    break;
+                if set.no_reward_countdown > 0 and no_reward_count > set.no_reward_countdown :
+                    sys.stdout.write(" no reward break at step " +  str(n) + ", ")
+                    sys.stdout.flush()
+                    break
                 
                 stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
                 
@@ -316,8 +321,8 @@ if __name__ == '__main__' :
     train.count_down(3)
     starttime = datetime.now()
     train.fit()
-    print(datetime.now() - starttime)
     #train.random_action()
+    print(datetime.now() - starttime)
     train.eval("Q_target_model.h5")
     
 
