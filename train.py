@@ -6,8 +6,7 @@ from PIL import Image
 from time import sleep
 from datetime import datetime, timedelta
 from pyautogui import click, screenshot
-from win32 import win32gui
-from keras.models import Model, load_model
+from keras.models import Model, load_model, optimizers
 
 from setting import TrainingSetting as set
 from stepqueue import StepQueue
@@ -18,12 +17,13 @@ class Train() :
     
     def __init__(self, use_weight_file = None) :
         
-        self.GameRegion = self.get_game_region("Getting Over It")
-        
+        self.GameRegion = set.get_game_region("Getting Over It")
         self.directInput = Keys()
+        self.model_optimizer = optimizers.sgd(lr = 0.1)
+        
         self.Q = QNet(set.model_input_shape, set.actions_num)
         self.Q.summary()
-        self.Q.compile(loss = "mse", optimizer = set.model_optimizer)
+        self.Q.compile(loss = "mse", optimizer = self.model_optimizer)
         
         if use_weight_file :
             self.Q.load_weights(use_weight_file)
@@ -37,27 +37,6 @@ class Train() :
             action_onehot = np.zeros((1, set.actions_num))
             action_onehot[0, i] = 1
             self.A.append(action_onehot)
-    
-    def get_game_region(self, title) :
-        if title :
-            gamewin = win32gui.FindWindow(None, title)
-            if not gamewin:
-                raise Exception('window title not found')
-            #get the bounding box of the window
-            x1, y1, x2, y2 = win32gui.GetWindowRect(gamewin)
-            
-            h_padding = (y2 - y1) * 0.1
-            w_padding = (x2 - x1) * 0.1
-            
-            y1 += h_padding # get rid of window bar
-            y2 -= h_padding
-            x1 += w_padding
-            x2 -= w_padding
-            
-            return (x1, y1, (x2 - x1 + 1), (y2 - y1 + 1))
-        else :
-            raise Exception("no window title was given.")
-    # end get_game_region
     
     def count_down(self, cd) :
         for i in range(cd) :
@@ -95,10 +74,10 @@ class Train() :
         相對方向的滑動
         [slow moving x angle_num, fast moving x angle_num]
         '''
-        slow_distance = 2400 # pixels
+        slow_distance = 3000 # pixels
         fast_distance = 6000 # pixels
-        slow_intv_distance = 4 # pixels
-        fast_intv_distance = 32
+        slow_intv_distance = 3 # pixels
+        fast_intv_distance = 30
         intv_time = 0.001
         
         if id < set.mouse_angle_devision :
