@@ -163,10 +163,12 @@ class Train() :
                 
                 total_reward += cur_reward
                 
-                if no_reward_break :
+                if set.no_reward_break :
                     if cur_reward <= set.bad_r :
                         no_reward_count += 1
-                    if no_reward_count * 2 > n :
+                    else :
+                        no_reard_count = 0
+                    if n > set.train_thrshld and no_reward_count * 2 > n :
                         break
                 
                 stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
@@ -296,8 +298,8 @@ if __name__ == '__main__' :
     train = Train()
     train.count_down(3)
     starttime = datetime.now()
-    train.random_action()
-    #train.fit()
+    #train.random_action()
+    train.fit()
     print(datetime.now() - starttime)
     train.eval("Q_target_model.h5")
     

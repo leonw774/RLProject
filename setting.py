@@ -55,7 +55,7 @@ class TrainingSetting() :
     
     good_r = 1.0
     bad_r = 0.0
-    been_here_decline_rate = 0.99 # 0.0 ~ 1.0, per step
+    been_here_decline_rate = 0.999 # 0.0 ~ 1.0, per step
 
     # ACTION SETTING
     mouse_angle_devision = 16
