@@ -76,8 +76,8 @@ class Train() :
         '''
         slow_distance = 3000 # pixels
         fast_distance = 6000 # pixels
-        slow_intv_distance = 3 # pixels
-        fast_intv_distance = 30
+        slow_intv_distance = 4 # pixels
+        fast_intv_distance = 32
         intv_time = 0.001
         
         if id < set.mouse_angle_devision :
@@ -162,10 +162,12 @@ class Train() :
                     break
                 
                 total_reward += cur_reward
-                if cur_reward <= set.bad_r :
-                    no_reward_count += 1
-                if no_reward_count > set.no_reward_countdown :
-                    break;
+                
+                if no_reward_break :
+                    if cur_reward <= set.bad_r :
+                        no_reward_count += 1
+                    if no_reward_count * 2 > n :
+                        break
                 
                 stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
                 

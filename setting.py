@@ -77,7 +77,7 @@ class TrainingSetting() :
     train_size = 64
     steps_update_target = 100 # set to 0 to disable
     
-    no_reward_countdown = train_thrshld + steps_update_target + 1
+    no_reward_break = True
     
     eps_test = 0.01
     steps_test = 500
