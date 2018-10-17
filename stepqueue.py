@@ -13,14 +13,14 @@ class StepQueue() :
         self.nxtScrshotsList = []
         self.actionsOccurrence = np.zeros(set.actions_num)
         self.mapList = []
-        for filename in os.listdir("/map/")
+        for filename in os.listdir("map/") :
             if set.shot_c == 1 :
-                map = Image.open("/map/" + filename).convert('L')
-                array_map = np.reshape(np.array(scrshot) / 255.5, (set.shot_h, set.shot_w, 1))
+                map = Image.open("map/" + filename).convert('L')
+                array_map = np.reshape(np.array(map) / 255.5, (set.shot_h, set.shot_w, 1))
             elif set.shot_c == 3 :
-                map = Image.open("/map/" + filename).convert('RGB')
-                array_map = np.array(scrshot) / 255.5
-            mapList.append(array_map)
+                map = Image.open("map/" + filename).convert('RGB')
+                array_map = np.array(map) / 255.5
+            self.mapList.append(array_map)
     
     def addStep(self, scrshot, action, reward, nxt_scrshot) :
         if len(self.scrshotList) + 1 == set.stepQueue_length_max :
@@ -86,10 +86,6 @@ class StepQueue() :
            
         # find the screenshot that is most similar: smallest diff
         for this_step, this_scrshot in enumerate(reversed(self.scrshotList)) :
-            # full image diff
-            d = 
-            
-            # stuck check
             if np.sum(np.absolute(this_scrshot - cur_scrshot)) <= set.no_move_thrshld and STUCK_COUNTDOWN > 0 :
                 OH_NO_YOURE_STUCK += 1  
             else : 
@@ -117,7 +113,7 @@ class StepQueue() :
         
         diff_score = -1
         
-        if isStuck(cur_scrshot) == True :
+        if self.isStuck(cur_scrshot) == True :
             sys.stdout.write("stuck")
             sys.stdout.flush()
             return "stuck"
@@ -125,7 +121,7 @@ class StepQueue() :
         if np.sum(np.absolute(pre_scrshot - cur_scrshot)) < set.no_move_thrshld :
             return set.bad_r
         
-        for this_step, this_mapshot in enumerate(mapList) :
+        for this_step, this_mapshot in enumerate(self.mapList) :
             d = np.sum(np.absolute(this_mapshot - pre_scrshot))
             if d < min_pre_diff :
                 min_pre_diff = d
@@ -137,4 +133,6 @@ class StepQueue() :
                 min_cur_dist = this_step
         
         if min_cur_dist > min_pre_dist :
-            return (min_cur_dist - min_pre_dist) * (set.been_here_decline_rate ** min_cur_diff_dist)
+           return (min_cur_dist - min_pre_dist) * set.good_r * (set.been_here_decline_rate ** len(self.scrshotList))
+        else :
+            return set.bad_r

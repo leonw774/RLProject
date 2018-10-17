@@ -55,7 +55,7 @@ class TrainingSetting() :
     
     good_r = 1.0
     bad_r = 0.0
-    been_here_decline_rate = 0.8 # 0.0 ~ 1.0, per step
+    been_here_decline_rate = 0.99 # 0.0 ~ 1.0, per step
 
     # ACTION SETTING
     mouse_angle_devision = 16
@@ -69,7 +69,7 @@ class TrainingSetting() :
     # TRAINING SETTING
     epsilon = 1.0
     eps_min = 0.2
-    eps_decay = 0.996
+    eps_decay = 0.9975
     epoches = 500
     steps_epoch = 1000
     train_thrshld = 101
