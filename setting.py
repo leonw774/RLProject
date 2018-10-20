@@ -39,7 +39,7 @@ class TrainingSetting() :
 
     # REWARD SETTING
     gamma = 0.36787944117 # 1 / exp(1)
-    good_thrshld = shot_h * shot_w * shot_c * (0.03 + 2 * noise_range) # 0.09
+    good_thrshld = shot_h * shot_w * shot_c * (0.02 + 2 * noise_range) # 0.08
     no_move_thrshld = shot_h * shot_w * shot_c * 0.03
     
     stuck_countdown = 75
