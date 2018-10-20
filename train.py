@@ -300,8 +300,8 @@ if __name__ == '__main__' :
     train = Train()
     train.count_down(3)
     starttime = datetime.now()
-    #train.random_action()
-    train.fit()
+    train.random_action()
+    #train.fit()
     print(datetime.now() - starttime)
     train.eval("Q_target_model.h5")
     

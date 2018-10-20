@@ -13,7 +13,8 @@ class StepQueue() :
         self.nxtScrshotsList = []
         self.actionsOccurrence = np.zeros(set.actions_num)
         self.mapList = []
-        for filename in os.listdir("map/") :
+        
+        for filename in mapname_list :
             if set.shot_c == 1 :
                 map = Image.open("map/" + filename).convert('L')
                 array_map = np.reshape(np.array(map) / 255.5, (set.shot_h, set.shot_w, 1))

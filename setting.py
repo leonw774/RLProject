@@ -1,6 +1,9 @@
 import numpy as np
 from win32 import win32gui
 
+def sorting_filename_as_int(element) :
+    return int(element[0 :- 4])
+
 class TrainingSetting() :
     
     # SCREENSHOTS SETTING
@@ -36,8 +39,11 @@ class TrainingSetting() :
 
     # Q NET SETTING
     model_input_shape = (shot_h, shot_w, shot_c * shot_n)
-
+    
+    
     # REWARD SETTING
+    mapname_list = sorted(os.listdir("map/"), key = sorting_filename_as_int)
+    
     gamma = 0.36787944117 # 1 / exp(1)
     good_thrshld = shot_h * shot_w * shot_c * (0.02 + 2 * noise_range) # 0.08
     no_move_thrshld = shot_h * shot_w * shot_c * 0.03
