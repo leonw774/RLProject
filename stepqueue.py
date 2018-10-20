@@ -21,6 +21,10 @@ class StepQueue() :
                 map = Image.open("map/" + filename).convert('RGB')
                 array_map = np.array(map) / 255.5
             self.mapList.append(array_map)
+        
+        self.r_per_map = set.total_r / len(self.mapList)
+        self.r_decline_rate = 1e-4 ** (len(self.mapList) / set.steps_epoch)
+        print(self.r_per_map, self.r_decline_rate)
     
     def addStep(self, scrshot, action, reward, nxt_scrshot) :
         if len(self.scrshotList) + 1 == set.stepQueue_length_max :
@@ -85,22 +89,16 @@ class StepQueue() :
         STUCK_COUNTDOWN = set.stuck_countdown
            
         # find the screenshot that is most similar: smallest diff
-        for this_step, this_scrshot in enumerate(reversed(self.scrshotList)) :
+        for this_step, this_scrshot in enumerate(reversed(self.scrshotList)[:STUCK_COUNTDOWN]) :
             if np.sum(np.absolute(this_scrshot - cur_scrshot)) <= set.no_move_thrshld and STUCK_COUNTDOWN > 0 :
                 OH_NO_YOURE_STUCK += 1  
-            else : 
-                OH_NO_YOURE_STUCK = 0
-            STUCK_COUNTDOWN -= 1
-            
-            if OH_NO_YOURE_STUCK > set.stuck_thrshld :
-                return True
-            else :
-                return False
+
+        return OH_NO_YOURE_STUCK > set.stuck_thrshld
     
     def calReward(self, pre_scrshot, cur_scrshot) :
         pre_scrshot = pre_scrshot[0] # before action
         cur_scrshot = cur_scrshot[0] # after action
-        if len(self.scrshotList) <= 2 : return 0
+        if len(self.scrshotList) <= 2 : return 0.0
         
         #print(cur_scrshot.shape)
         #print(self.scrshotList[0].shape)
@@ -119,10 +117,11 @@ class StepQueue() :
             return "stuck"
         
         if np.sum(np.absolute(pre_scrshot - cur_scrshot)) < set.no_move_thrshld :
-            return set.bad_r
+            return 0.0
         
         for this_step, this_mapshot in enumerate(self.mapList) :
             d = np.sum(np.absolute(this_mapshot - pre_scrshot))
+            
             if d < min_pre_diff :
                 min_pre_diff = d
                 min_pre_dist = this_step 
@@ -132,7 +131,8 @@ class StepQueue() :
                 min_cur_diff = d
                 min_cur_dist = this_step
         
-        if min_cur_dist > min_pre_dist :
-           return (min_cur_dist - min_pre_dist) * set.good_r * (set.been_here_decline_rate ** len(self.scrshotList))
-        else :
-            return set.bad_r
+        if min_cur_diff > set.good_thrshld : 
+            # not in the map!
+            return -0.0 if min_pre_diff > set.good_thrshld else -1.0
+        
+        return (min_cur_dist - min_pre_dist) * self.r_per_map * (set.decline_rate ** len(self.scrshotList))

@@ -42,20 +42,13 @@ class TrainingSetting() :
     good_thrshld = shot_h * shot_w * shot_c * (0.03 + 2 * noise_range) # 0.09
     no_move_thrshld = shot_h * shot_w * shot_c * 0.03
     
-    stuck_countdown = 90
-    stuck_thrshld = 60
+    stuck_countdown = 75
+    stuck_thrshld = 50
     
-    use_compare_block = False
-    block_side_num = 4
-    block_num = block_side_num ** 2
-    compare_stride = min(shot_h // block_side_num // 2, shot_w // block_side_num // 2)
-    compare_block_size = (block_num, shot_h // block_side_num, shot_w // block_side_num, shot_c)
-    block_diff_good_thrshld = good_thrshld / block_num * 1.2
-    block_score_good_thrshld = block_num // 2 + 1
-    
+    total_r = 100.0
     good_r = 1.0
     bad_r = 0.0
-    been_here_decline_rate = 0.999 # 0.0 ~ 1.0, per step
+    decline_rate = 0.8 # 0.0 ~ 1.0, per step
 
     # ACTION SETTING
     mouse_angle_devision = 16
@@ -69,16 +62,16 @@ class TrainingSetting() :
     # TRAINING SETTING
     epsilon = 1.0
     eps_min = 0.2
-    eps_decay = 0.9975
-    epoches = 500
-    steps_epoch = 1000
+    eps_decay = 0.994
+    epoches = 200
+    steps_epoch = 500
     train_thrshld = 101
     steps_train = 6
     train_size = 64
     steps_update_target = 100 # set to 0 to disable
     
-    no_reward_break = True
+    no_reward_break = False
     
     eps_test = 0.01
-    steps_test = 500
+    steps_test = 50
     

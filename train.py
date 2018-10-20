@@ -77,7 +77,7 @@ class Train() :
         slow_distance = 3000 # pixels
         fast_distance = 6000 # pixels
         slow_intv_distance = 4 # pixels
-        fast_intv_distance = 32
+        fast_intv_distance = 60
         intv_time = 0.001
         
         if id < set.mouse_angle_devision :
@@ -96,17 +96,17 @@ class Train() :
         sleep(set.do_control_pause)
     # end def do_control()
     
-    def click_newgame(self) :
-        sleep(0.5)
+    def newgame(self) :
+        sleep(1)
         # click "NEW GAME"
         click(self.GameRegion[0] + self.GameRegion[2] * 0.70, self.GameRegion[1] + self.GameRegion[3] * 0.40)
         sleep(8)
     
-    def click_quitgame(self) :
-        sleep(0.5)
+    def quitgame(self) :
+        sleep(1)
         # push ESC
         self.directInput.directKey("ESC")
-        sleep(0.5)
+        sleep(1)
         # click "QUIT"
         click(self.GameRegion[0] + self.GameRegion[2] * 0.15, self.GameRegion[1] + self.GameRegion[3] * 1.05)
         sleep(10)
@@ -120,11 +120,12 @@ class Train() :
         after a number of steps, copy Q to Q_target.
         '''
         
+        stepQueue = StepQueue()
+        
         for e in range(set.epoches) :
             
-            self.click_newgame()
+            self.newgame()
             
-            stepQueue = StepQueue()
             total_reward = 0
             no_reward_count = 0
             this_epoch_epsilon = max(set.eps_min, set.epsilon * (set.eps_decay ** e), random.random())
@@ -214,12 +215,13 @@ class Train() :
                     self.Q_target.set_weights(self.Q.get_weights())
                     self.Q_target.save("Q_target_model.h5")
                     
-                # end for(STEP_PER_EPOCH)  
+            # end for(STEP_PER_EPOCH)
+            
             print("end epoch", e, "total_reward:", total_reward)
             stepQueue.clear()
-            
+            self.Q_target.save("Q_target_model.h5")
             # Restart Game...
-            self.click_quitgame()
+            self.quitgame()
             
         # end for(epoches)
         
@@ -232,7 +234,7 @@ class Train() :
         self.Q = load_model(model_weight_name)
         
         # click "NEW GAME"
-        self.click_newgame()
+        self.newgame()
         
         stepQueue = StepQueue()
         total_reward = 0
@@ -262,13 +264,13 @@ class Train() :
         screenshot(region = self.GameRegion).save("eval_scrshot.png")
         
         # Exit Game...
-        self.click_quitgame()
+        self.quitgame()
 
     # end def eval
     
     def random_action(self, steps = None) :
         # click "NEW GAME"
-        self.click_newgame()
+        self.newgame()
         stepQueue = StepQueue()
         total_reward = 0
         if steps == None : steps = set.steps_test
@@ -289,7 +291,7 @@ class Train() :
         del stepQueue
         print("eval end, totalReward:", total_reward)
         # Exit Game...
-        self.click_quitgame()
+        self.quitgame()
     # end def
     
 # end class Train
