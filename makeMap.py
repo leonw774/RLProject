@@ -49,7 +49,7 @@ while(True) :
                 d = np.sum(np.absolute(this_scrshot - array_scrshot))
                 if d < min_diff : min_diff = d
             
-            if min_diff > set.good_thrshld:
+            if min_diff > set.good_thrshld * 0.8:
                 scrshotList.append(array_scrshot)
                 print("map", saved_scrshot_count, "added")
                 scrshot.save("map/" + str(saved_scrshot_count) + ".png")
