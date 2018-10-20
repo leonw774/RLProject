@@ -1,4 +1,3 @@
-import os
 import sys
 import numpy as np
 from PIL import Image
@@ -14,7 +13,7 @@ class StepQueue() :
         self.actionsOccurrence = np.zeros(set.actions_num)
         self.mapList = []
         
-        for filename in mapname_list :
+        for filename in set.mapname_list :
             if set.shot_c == 1 :
                 map = Image.open("map/" + filename).convert('L')
                 array_map = np.reshape(np.array(map) / 255.5, (set.shot_h, set.shot_w, 1))
@@ -24,7 +23,7 @@ class StepQueue() :
             self.mapList.append(array_map)
         
         self.r_per_map = set.total_r / len(self.mapList)
-        self.r_decline_rate = 1e-4 ** (len(self.mapList) / set.steps_epoch)
+        self.r_decline_rate = 0.1 ** (len(self.mapList) / set.steps_epoch)
         print(self.r_per_map, self.r_decline_rate)
     
     def addStep(self, scrshot, action, reward, nxt_scrshot) :
@@ -90,7 +89,7 @@ class StepQueue() :
         STUCK_COUNTDOWN = set.stuck_countdown
            
         # find the screenshot that is most similar: smallest diff
-        for this_step, this_scrshot in enumerate(reversed(self.scrshotList)[:STUCK_COUNTDOWN]) :
+        for this_step, this_scrshot in enumerate(reversed(self.scrshotList[-STUCK_COUNTDOWN:])) :
             if np.sum(np.absolute(this_scrshot - cur_scrshot)) <= set.no_move_thrshld and STUCK_COUNTDOWN > 0 :
                 OH_NO_YOURE_STUCK += 1  
 

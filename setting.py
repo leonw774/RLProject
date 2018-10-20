@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from win32 import win32gui
 
@@ -45,7 +46,7 @@ class TrainingSetting() :
     mapname_list = sorted(os.listdir("map/"), key = sorting_filename_as_int)
     
     gamma = 0.36787944117 # 1 / exp(1)
-    good_thrshld = shot_h * shot_w * shot_c * (0.02 + 2 * noise_range) # 0.08
+    good_thrshld = shot_h * shot_w * shot_c * (0.03 + 2 * noise_range) # 0.09
     no_move_thrshld = shot_h * shot_w * shot_c * 0.03
     
     stuck_countdown = 75
