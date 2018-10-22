@@ -137,4 +137,4 @@ class StepQueue() :
             # not in the map!
             return -0.0
         
-        return (min_cur_dist - min_pre_dist) * self.r_per_map * (self.r_decline_rate ** len(self.scrshotList))
+        return (min_cur_dist - min_pre_dist) * self.r_per_map
