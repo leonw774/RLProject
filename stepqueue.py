@@ -135,4 +135,12 @@ class StepQueue() :
             # not in the map!
             return -0.0 if min_pre_diff > set.good_thrshld else -1.0
         
-        return (min_cur_dist - min_pre_dist) * self.r_per_map * (set.decline_rate ** len(self.scrshotList))
+        final_reward = min_cur_dist - min_pre_dist
+        
+        if final_reward > 0 :
+            return final_reward * self.r_per_map * (self.r_decline_rate ** len(self.scrshotList))
+        elif final_reward == 0 :
+            return 0.0
+        else
+            return final_reward * self.r_per_map * (self.r_decline_rate ** (1 - len(self.scrshotList)))
+        
