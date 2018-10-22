@@ -8,13 +8,14 @@ def sorting_filename_as_int(element) :
 class TrainingSetting() :
     
     # SCREENSHOTS SETTING
-    shot_n = 2
+    shot_n = 1
     shot_w = 128
     shot_h = 72
     shot_c = 1
     shot_shape = (1, shot_h, shot_w, shot_c)
     shot_resize = (shot_w, shot_h)
     shot_intv_time = 0.01
+    shot_wait_max = 20
     noise_range = 0.03
     
     def get_game_region(title = None) :
@@ -44,24 +45,18 @@ class TrainingSetting() :
     
     # REWARD SETTING
     mapname_list = sorted(os.listdir("map/"), key = sorting_filename_as_int)
-    
     gamma = 0.36787944117 # 1 / exp(1)
     good_thrshld = shot_h * shot_w * shot_c * (0.03 + 2 * noise_range) # 0.09
     no_move_thrshld = shot_h * shot_w * shot_c * 0.03
-    
-    stuck_countdown = 75
-    stuck_thrshld = 50
-    
+    stuck_countdown = 80
+    stuck_thrshld = 60
     total_r = 100.0
-    good_r = 1.0
-    bad_r = 0.0
-    decline_rate = 0.8 # 0.0 ~ 1.0, per step
 
     # ACTION SETTING
     mouse_angle_devision = 16
     actions_num = mouse_angle_devision * 2
     # {slow moving, fast moving}
-    do_control_pause = 0.1
+    do_control_pause = 0.01
 
     # STEP QUEUE SETTING
     stepQueue_length_max = 10000 # set 0 to be no limit
@@ -72,7 +67,7 @@ class TrainingSetting() :
     eps_decay = 0.994
     epoches = 200
     steps_epoch = 500
-    train_thrshld = 101
+    train_thrshld = 99
     steps_train = 6
     train_size = 64
     steps_update_target = 100 # set to 0 to disable

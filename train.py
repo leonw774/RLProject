@@ -44,22 +44,28 @@ class Train() :
             sleep(1.0)
             
     def get_screenshot(self, num = 1, savefile = None) :
-        sleep(set.shot_intv_time)
         array_scrshot = np.zeros(set.shot_shape)
-        while(True) :
-            if set.shot_c == 1 :
-                scrshot = (screenshot(region = self.GameRegion)).convert('L').resize(set.shot_resize, resample = Image.NEAREST)
-                array_scrshot = np.reshape(np.array(scrshot) / 255.5, set.shot_shape)
-            elif set.shot_c == 3 :
-                scrshot = (screenshot(region = self.GameRegion)).convert('RGB').resize(set.shot_resize, resample = Image.NEAREST)
-                array_scrshot[0] = np.array(scrshot) / 255.5
-            else :
-                raise Exception("shot_c isn't right.")
-            if savefile : scrshot.save(savefile)
-            if np.sum(array_scrshot) < 0.001 :
-                sleep(2.0)
-            else :
-                return array_scrshot
+        cur = screenshot(region = self.GameRegion).convert('RGB').resize(set.shot_resize, resample = Image.NEAREST)
+        i = 0
+        while(i <= set.shot_wait_max) :
+            i += 1
+            #print("waiting for no moving")
+            sleep(set.shot_intv_time)
+            pre = cur
+            cur = screenshot(region = self.GameRegion).convert('RGB').resize(set.shot_resize, resample = Image.NEAREST)
+            if np.sum(cur) < 255 :
+                continue
+            if np.sum(np.absolute((np.array(pre) - np.array(cur)) / 256.0)) < 32 * set.no_move_thrshld :
+                break
+        
+        if set.shot_c == 1 :
+            array_scrshot = np.reshape(np.array(cur.convert('L')) / 255.5, set.shot_shape)
+        elif set.shot_c == 3 :
+            array_scrshot[0] = np.array(cur) / 255.5
+        else :
+            raise Exception("shot_c isn't right.")
+        if savefile : scrshot.save(savefile)
+        return array_scrshot
     # end def get_screenshot
     
     def add_noise(self, noisy_scrshot) :
@@ -300,8 +306,8 @@ if __name__ == '__main__' :
     train = Train()
     train.count_down(3)
     starttime = datetime.now()
-    train.random_action()
-    #train.fit()
+    #train.random_action()
+    train.fit()
     print(datetime.now() - starttime)
     train.eval("Q_target_model.h5")
     

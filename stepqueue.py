@@ -23,7 +23,7 @@ class StepQueue() :
             self.mapList.append(array_map)
         
         self.r_per_map = set.total_r / len(self.mapList)
-        self.r_decline_rate = 0.1 ** (len(self.mapList) / set.steps_epoch)
+        self.r_decline_rate = (set.gamma) ** (len(self.mapList) / set.steps_epoch)
         print(self.r_per_map, self.r_decline_rate)
     
     def addStep(self, scrshot, action, reward, nxt_scrshot) :
@@ -91,7 +91,9 @@ class StepQueue() :
         # find the screenshot that is most similar: smallest diff
         for this_step, this_scrshot in enumerate(reversed(self.scrshotList[-STUCK_COUNTDOWN:])) :
             if np.sum(np.absolute(this_scrshot - cur_scrshot)) <= set.no_move_thrshld and STUCK_COUNTDOWN > 0 :
-                OH_NO_YOURE_STUCK += 1  
+                OH_NO_YOURE_STUCK += 1
+            else :
+                OH_NO_YOURE_STUCK -= 1
 
         return OH_NO_YOURE_STUCK > set.stuck_thrshld
     
@@ -131,8 +133,8 @@ class StepQueue() :
                 min_cur_diff = d
                 min_cur_dist = this_step
         
-        if min_cur_diff > set.good_thrshld : 
+        if min_cur_diff > set.good_thrshld or min_pre_diff > set.good_thrshld : 
             # not in the map!
-            return -0.0 if min_pre_diff > set.good_thrshld else -1.0
+            return -0.0
         
-        return (min_cur_dist - min_pre_dist) * self.r_per_map * (set.decline_rate ** len(self.scrshotList))
+        return (min_cur_dist - min_pre_dist) * self.r_per_map * (self.r_decline_rate ** len(self.scrshotList))
