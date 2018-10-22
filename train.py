@@ -53,8 +53,9 @@ class Train() :
             sleep(set.shot_intv_time)
             pre = cur
             cur = screenshot(region = self.GameRegion).convert('RGB').resize(set.shot_resize, resample = Image.NEAREST)
-            if np.sum(cur) < 255 :
+            if np.sum(np.array(cur)) < 256 :
                 continue
+            #print(np.sum(np.absolute((np.array(pre) - np.array(cur)) / 256.0)))
             if np.sum(np.absolute((np.array(pre) - np.array(cur)) / 256.0)) < 32 * set.no_move_thrshld :
                 break
         
@@ -75,29 +76,48 @@ class Train() :
         return noisy_scrshot
     # end def get_screen_rect
     
-    def do_control(self, id) : 
-        '''
-        相對方向的滑動
-        [slow moving x angle_num, fast moving x angle_num]
-        '''
-        slow_distance = 3000 # pixels
-        fast_distance = 6000 # pixels
-        slow_intv_distance = 4 # pixels
-        fast_intv_distance = 60
+    def do_control(self, id) :
+        
         intv_time = 0.001
         
-        if id < set.mouse_angle_devision :
-            intv_distance, distance = slow_intv_distance, slow_distance
+        if id < set.mouse_straight_angles * 2 :
+            # is straight
+            slow_distance = 3000 # pixels
+            fast_distance = 5000 # pixels
+            slow_delta = 4 # pixels
+            fast_delta = 40
+        
+            if id < set.mouse_straight_angles :
+                delta, distance = slow_delta, slow_distance
+            else :
+                delta, distance = fast_delta, fast_distance
+            
+            angle = 2 * math.pi * id / set.mouse_straight_angles
+            d_x = math.ceil(math.cos(angle) * delta)
+            d_y = math.ceil(math.sin(angle) * delta)
+            
+            for i in range(distance // delta) :
+                self.directInput.directMouse(d_x, d_y)
+                sleep(intv_time)
         else :
-            intv_distance, distance = fast_intv_distance, fast_distance
-        
-        angle = 2 * math.pi * id / set.mouse_angle_devision
-        offset_x = math.ceil(math.cos(angle) * intv_distance)
-        offset_y = math.ceil(math.sin(angle) * intv_distance)
-        
-        for i in range(distance // intv_distance) :
-            self.directInput.directMouse(offset_x, offset_y)
-            sleep(intv_time)
+            # is round
+            id -= set.mouse_straight_angles * 2
+            radius = 800
+            angle_delta_ratio = 36
+            v = int(2 * (radius**2) * (1 - math.cos(1.0 / angle_delta_ratio))) 
+            delta = 16
+            is_clockwise = -1.0 if id < set.mouse_round_angles else 1.0
+            
+            print("v", v)
+            
+            for i in range(int(angle_delta_ratio * 0.8)) : 
+                angle = 2 * math.pi * (id / set.mouse_round_angles + i * is_clockwise / float(angle_delta_ratio))
+                d_x = math.ceil(math.cos(angle) * delta * is_clockwise)
+                d_y = math.ceil(math.sin(angle) * delta * is_clockwise)
+                print("angle", angle)
+                for j in range(v // delta + 1) :
+                    self.directInput.directMouse(d_x, d_y)
+                    sleep(intv_time)
         
         sleep(set.do_control_pause)
     # end def do_control()
@@ -305,8 +325,8 @@ class Train() :
 if __name__ == '__main__' :
     train = Train()
     train.count_down(3)
-    starttime = datetime.now()
-    #train.random_action()
+    #starttime = datetime.now()
+    train.random_action()
     train.fit()
     print(datetime.now() - starttime)
     train.eval("Q_target_model.h5")

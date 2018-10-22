@@ -15,16 +15,19 @@ class StepQueue() :
         
         for filename in set.mapname_list :
             if set.shot_c == 1 :
-                map = Image.open("map/" + filename).convert('L')
+                map = Image.open("map/" + filename).convert('L').resize(set.shot_resize, resample = Image.NEAREST)
                 array_map = np.reshape(np.array(map) / 255.5, (set.shot_h, set.shot_w, 1))
             elif set.shot_c == 3 :
-                map = Image.open("map/" + filename).convert('RGB')
+                map = Image.open("map/" + filename).convert('RGB').resize(set.shot_resize, resample = Image.NEAREST)
                 array_map = np.array(map) / 255.5
             self.mapList.append(array_map)
         
         self.r_per_map = set.total_r / len(self.mapList)
-        self.r_decline_rate = (set.gamma) ** (len(self.mapList) / set.steps_epoch)
-        print(self.r_per_map, self.r_decline_rate)
+        #self.r_decline_rate = (set.gamma) ** (len(self.mapList) / set.steps_epoch)
+        
+        print(set.no_move_thrshld, set.move_much_thrshld)
+        print(self.r_per_map)
+        #print(self.r_decline_rate)
     
     def addStep(self, scrshot, action, reward, nxt_scrshot) :
         if len(self.scrshotList) + 1 == set.stepQueue_length_max :
@@ -32,11 +35,11 @@ class StepQueue() :
             self.actionList.pop(0)
             self.rewardList.pop(0)
             self.nxtScrshotsList.pop(0)
-        '''
+        
         if (scrshot.shape != set.shot_shape) or (nxt_scrshot.shape != set.shot_shape) :
             print("scrshot shape no good: Received", scrshot.shape, " but ", set.shot_shape, " is expected.")
             return
-        '''
+        
         self.scrshotList.append(scrshot[0]) # np array
         self.actionList.append(action) # int
         self.rewardList.append(reward) # float
@@ -133,7 +136,9 @@ class StepQueue() :
                 min_cur_diff = d
                 min_cur_dist = this_step
         
-        if min_cur_diff > set.good_thrshld or min_pre_diff > set.good_thrshld : 
+        #print(min_pre_dist, "with", min_pre_diff, "to", min_cur_dist, "with", min_cur_diff)
+        
+        if min_cur_diff >= set.move_much_thrshld * 2 or min_pre_diff >= set.move_much_thrshld * 2: 
             # not in the map!
             return -0.0
         
