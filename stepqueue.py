@@ -23,11 +23,11 @@ class StepQueue() :
             self.mapList.append(array_map)
         
         self.r_per_map = set.total_r / len(self.mapList)
-        #self.r_decline_rate = (set.gamma) ** (len(self.mapList) / set.steps_epoch)
+        self.r_decline_rate = set.gamma ** (len(self.mapList) / set.steps_epoch)
         
-        print(set.no_move_thrshld, set.move_much_thrshld)
-        print(self.r_per_map)
-        #print(self.r_decline_rate)
+        print("no_move, move:", set.no_move_thrshld, set.move_much_thrshld)
+        print("r per map:", self.r_per_map)
+        print(self.r_decline_rate)
     
     def addStep(self, scrshot, action, reward, nxt_scrshot) :
         if len(self.scrshotList) + 1 == set.stepQueue_length_max :
@@ -143,3 +143,4 @@ class StepQueue() :
             return -0.0
         
         return (min_cur_dist - min_pre_dist) * self.r_per_map
+        

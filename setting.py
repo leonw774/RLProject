@@ -46,11 +46,11 @@ class TrainingSetting() :
     # REWARD SETTING
     mapname_list = sorted(os.listdir("map/"), key = sorting_filename_as_int)
     gamma = 0.36787944117 # 1 / exp(1)
-    move_much_thrshld = shot_h * shot_w * shot_c * (0.06 + 2 * noise_range) # 0.08
+    move_much_thrshld = shot_h * shot_w * shot_c * (0.07 + 2 * noise_range) # 0.09
     no_move_thrshld = shot_h * shot_w * shot_c * 0.03
     stuck_countdown = 80
     stuck_thrshld = 60
-    total_r = 100.0
+    total_r = len(mapname_list)
 
     # ACTION SETTING
     mouse_straight_angles = 12
@@ -64,7 +64,7 @@ class TrainingSetting() :
 
     # TRAINING SETTING
     epsilon = 1.0
-    eps_min = 0.25
+    eps_min = 0.2
     eps_decay = 0.995
     epoches = 100
     steps_epoch = 500

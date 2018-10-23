@@ -85,7 +85,7 @@ class Train() :
             slow_distance = 3000 # pixels
             fast_distance = 5000 # pixels
             slow_delta = 4 # pixels
-            fast_delta = 40
+            fast_delta = 32
         
             if id < set.mouse_straight_angles :
                 delta, distance = slow_delta, slow_distance
@@ -102,19 +102,18 @@ class Train() :
         else :
             # is round
             id -= set.mouse_straight_angles * 2
-            radius = 800
-            angle_delta_ratio = 36
-            v = int(2 * (radius**2) * (1 - math.cos(1.0 / angle_delta_ratio))) 
-            delta = 16
-            is_clockwise = -1.0 if id < set.mouse_round_angles else 1.0
+            radius = 600
+            d_angle_ratio = 36
+            v = int(2 * (radius**2) * (1 - math.cos(1.0 / d_angle_ratio))) 
+            delta = 8
+            if id < set.mouse_round_angles :
+                delta = -delta
+                d_angle_ratio = -d_angle_ratio
             
-            print("v", v)
-            
-            for i in range(int(angle_delta_ratio * 0.8)) : 
-                angle = 2 * math.pi * (id / set.mouse_round_angles + i * is_clockwise / float(angle_delta_ratio))
-                d_x = math.ceil(math.cos(angle) * delta * is_clockwise)
-                d_y = math.ceil(math.sin(angle) * delta * is_clockwise)
-                print("angle", angle)
+            for i in range(int(d_angle_ratio * 0.8)) : 
+                angle = 2 * math.pi * (id / set.mouse_round_angles + i / float(d_angle_ratio))
+                d_x = math.ceil(math.cos(angle) * delta)
+                d_y = math.ceil(math.sin(angle) * delta)
                 for j in range(v // delta + 1) :
                     self.directInput.directMouse(d_x, d_y)
                     sleep(intv_time)
@@ -325,8 +324,8 @@ class Train() :
 if __name__ == '__main__' :
     train = Train()
     train.count_down(3)
-    #starttime = datetime.now()
-    train.random_action()
+    starttime = datetime.now()
+    #train.random_action()
     train.fit()
     print(datetime.now() - starttime)
     train.eval("Q_target_model.h5")
