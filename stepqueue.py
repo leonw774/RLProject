@@ -27,7 +27,7 @@ class StepQueue() :
         
         print("no_move, move:", set.no_move_thrshld, set.move_much_thrshld)
         print("r per map:", self.r_per_map)
-        print(self.r_decline_rate)
+        print("r decline:", self.r_decline_rate)
     
     def addStep(self, scrshot, action, reward, nxt_scrshot) :
         if len(self.scrshotList) + 1 == set.stepQueue_length_max :
@@ -90,8 +90,7 @@ class StepQueue() :
     def isStuck(self, cur_scrshot) :
         OH_NO_YOURE_STUCK = 0
         STUCK_COUNTDOWN = set.stuck_countdown
-           
-        # find the screenshot that is most similar: smallest diff
+        
         for this_step, this_scrshot in enumerate(reversed(self.scrshotList[-STUCK_COUNTDOWN:])) :
             if np.sum(np.absolute(this_scrshot - cur_scrshot)) <= set.no_move_thrshld and STUCK_COUNTDOWN > 0 :
                 OH_NO_YOURE_STUCK += 1

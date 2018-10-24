@@ -19,7 +19,7 @@ class Train() :
         
         self.GameRegion = set.get_game_region("Getting Over It")
         self.directInput = Keys()
-        self.model_optimizer = optimizers.sgd(lr = 0.1)
+        self.model_optimizer = optimizers.sgd(lr = 0.01, momentum = 0.5, decay = 1e-8)
         
         self.Q = QNet(set.model_input_shape, set.actions_num)
         self.Q.summary()
@@ -55,7 +55,7 @@ class Train() :
             cur = screenshot(region = self.GameRegion).convert('RGB').resize(set.shot_resize, resample = Image.NEAREST)
             if np.sum(np.array(cur)) < 256 :
                 continue
-            if np.sum(np.absolute((np.array(pre) - np.array(cur)) / 256.0)) < 48 * set.no_move_thrshld :
+            if np.sum(np.absolute((np.array(pre) - np.array(cur)) / 256.0)) < 32 * set.no_move_thrshld :
                 break
         
         if set.shot_c == 1 :
@@ -82,9 +82,9 @@ class Train() :
         if id < set.mouse_straight_angles * 2 :
             # is straight
             slow_distance = 800 # pixels
-            fast_distance = 4096 # pixels
-            slow_delta = 4 # pixels
-            fast_delta = 32
+            fast_distance = 4000 # pixels
+            slow_delta = 3 # pixels
+            fast_delta = 30
         
             if id < set.mouse_straight_angles :
                 delta, distance = slow_delta, slow_distance
@@ -98,21 +98,21 @@ class Train() :
             for i in range(distance // delta) :
                 self.directInput.directMouse(d_x, d_y)
                 sleep(intv_time)
+            if id >= set.mouse_straight_angles :
+                sleep(0.02)
         else :
             # is round
             id -= set.mouse_straight_angles * 2
-            radius = 600
-            d_angle_ratio = 36
-            v = int(2 * (radius**2) * (1 - math.cos(1.0 / d_angle_ratio))) 
-            delta = 8
-            if id < set.mouse_round_angles :
-                delta = -delta
-                d_angle_ratio = -d_angle_ratio
+            radius = 450
+            circle_divide = 36
+            v = int(2 * (radius**2) * (1 - math.cos(1.0 / circle_divide))) 
+            delta = 9
+            is_clockwise = 1 if id < set.mouse_round_angles else -1
             
-            for i in range(int(d_angle_ratio * (1 - 1 / set.mouse_round_angles))) : 
-                angle = 2 * math.pi * (id / set.mouse_round_angles + i / float(d_angle_ratio))
-                d_x = math.ceil(math.cos(angle) * delta)
-                d_y = math.ceil(math.sin(angle) * delta)
+            for i in range(int(circle_divide * 0.66)) : 
+                angle = 2 * math.pi * (id / set.mouse_round_angles + i / float(circle_divide))
+                d_x = math.ceil(math.cos(angle) * delta) * is_clockwise
+                d_y = math.ceil(math.sin(angle) * delta) * is_clockwise
                 for j in range(v // delta + 1) :
                     self.directInput.directMouse(d_x, d_y)
                     sleep(intv_time)
@@ -324,8 +324,8 @@ if __name__ == '__main__' :
     train = Train()
     train.count_down(3)
     starttime = datetime.now()
-    train.random_action()
-    #train.fit()
+    #train.random_action()
+    train.fit()
     print(datetime.now() - starttime)
     train.eval("Q_target_model.h5")
     

@@ -9,9 +9,9 @@ class TrainingSetting() :
     
     # SCREENSHOTS SETTING
     shot_n = 1
-    shot_w = 120
-    shot_h = 80
-    shot_c = 1
+    shot_w = 108
+    shot_h = 72
+    shot_c = 3
     shot_shape = (1, shot_h, shot_w, shot_c)
     shot_resize = (shot_w, shot_h)
     shot_intv_time = 0.005
@@ -46,18 +46,18 @@ class TrainingSetting() :
     # REWARD SETTING
     mapname_list = sorted(os.listdir("map/"), key = sorting_filename_as_int)
     gamma = 0.36787944117 # 1 / exp(1)
-    move_much_thrshld = shot_h * shot_w * shot_c * (0.07 + 2 * noise_range) # 0.09
-    no_move_thrshld = shot_h * shot_w * shot_c * 0.03
-    stuck_countdown = 90
-    stuck_thrshld = 80
+    move_much_thrshld = shot_h * shot_w * shot_c * (0.07 + 2 * noise_range) * ((shot_c - 1) * 0.01 + 1) # 0.09
+    no_move_thrshld = shot_h * shot_w * shot_c * 0.03 * ((shot_c - 1) * 0.01 + 1)
+    stuck_countdown = 125
+    stuck_thrshld = 120
     total_r = len(mapname_list)
 
-    # ACTION SETTING
+    # ACTION SETTIN
     mouse_straight_angles = 12
     mouse_round_angles = 4
-    actions_num = mouse_straight_angles * 2 + mouse_round_angles * 2
+    actions_num = (mouse_straight_angles + mouse_round_angles) * 2
     # {slow straight, fast straight, clockwise round, ccwise round}
-    do_control_pause = 0.001
+    do_control_pause = 0.01
 
     # STEP QUEUE SETTING
     stepQueue_length_max = 10000 # set 0 to be no limit
@@ -66,8 +66,8 @@ class TrainingSetting() :
     epsilon = 1.0
     eps_min = 0.2
     eps_decay = 0.996
-    epoches = 100
-    steps_epoch = 800
+    epoches = 200
+    steps_epoch = 500
     train_thrshld = 80
     steps_train = 8
     train_size = 64
@@ -75,6 +75,6 @@ class TrainingSetting() :
     
     no_reward_break = False
     
-    eps_test = 0.1
+    eps_test = 0.2
     steps_test = 500
     
