@@ -55,8 +55,7 @@ class Train() :
             cur = screenshot(region = self.GameRegion).convert('RGB').resize(set.shot_resize, resample = Image.NEAREST)
             if np.sum(np.array(cur)) < 256 :
                 continue
-            #print(np.sum(np.absolute((np.array(pre) - np.array(cur)) / 256.0)))
-            if np.sum(np.absolute((np.array(pre) - np.array(cur)) / 256.0)) < 32 * set.no_move_thrshld :
+            if np.sum(np.absolute((np.array(pre) - np.array(cur)) / 256.0)) < 48 * set.no_move_thrshld :
                 break
         
         if set.shot_c == 1 :
@@ -82,8 +81,8 @@ class Train() :
         
         if id < set.mouse_straight_angles * 2 :
             # is straight
-            slow_distance = 3000 # pixels
-            fast_distance = 5000 # pixels
+            slow_distance = 800 # pixels
+            fast_distance = 4096 # pixels
             slow_delta = 4 # pixels
             fast_delta = 32
         
@@ -110,7 +109,7 @@ class Train() :
                 delta = -delta
                 d_angle_ratio = -d_angle_ratio
             
-            for i in range(int(d_angle_ratio * 0.8)) : 
+            for i in range(int(d_angle_ratio * (1 - 1 / set.mouse_round_angles))) : 
                 angle = 2 * math.pi * (id / set.mouse_round_angles + i / float(d_angle_ratio))
                 d_x = math.ceil(math.cos(angle) * delta)
                 d_y = math.ceil(math.sin(angle) * delta)
@@ -269,7 +268,7 @@ class Train() :
             input_shots[:,:,:, : -set.shot_c] = input_shots[:,:,:, set.shot_c: ] # dequeue
             input_shots[:,:,:, -set.shot_c : ] = cur_shot # enqueue
             
-            if n <= set.shot_n or random.random() < set.eps_test :
+            if n <= set.shot_n or random.random() <= set.eps_test :
                 cur_action = random.randrange(set.actions_num)
             else :
                 predict_Q = self.Q.predict(self.add_noise(input_shots))
@@ -325,8 +324,8 @@ if __name__ == '__main__' :
     train = Train()
     train.count_down(3)
     starttime = datetime.now()
-    #train.random_action()
-    train.fit()
+    train.random_action()
+    #train.fit()
     print(datetime.now() - starttime)
     train.eval("Q_target_model.h5")
     

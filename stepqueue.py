@@ -138,9 +138,11 @@ class StepQueue() :
         
         #print(min_pre_dist, "with", min_pre_diff, "to", min_cur_dist, "with", min_cur_diff)
         
-        if min_cur_diff >= set.move_much_thrshld * 2 or min_pre_diff >= set.move_much_thrshld * 2: 
+        if min_cur_diff >= set.move_much_thrshld * 1.5 :
             # not in the map!
             return -0.0
+        elif min_pre_diff >= set.move_much_thrshld * 1.5 :
+            return set.gamma
         
         return (min_cur_dist - min_pre_dist) * self.r_per_map
         

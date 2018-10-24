@@ -21,22 +21,16 @@ for i in range(10) :
     sleep(1.0)
 
 saved_scrshot_count = 0
-array_scrshot = np.zeros((int(GameRegion[3]), int(GameRegion[2])))
+array_scrshot = np.zeros((int(GameRegion[3]), int(GameRegion[2]), 3))
 
 while(True) :
     pre_array_scrshot = array_scrshot
     sleep(0.01)
     # get screen shot
-    if set.shot_c == 1 :
-        scrshot = (screenshot(region = GameRegion)).convert('L')
-        array_scrshot = np.array(scrshot) / 255.5
-    elif set.shot_c == 3 :
-        scrshot = (screenshot(region = GameRegion)).convert('RGB')
-        array_scrshot = np.array(scrshot) / 255.5
-    else :
-        raise Exception("shot_c isn't right.")
+    scrshot = (screenshot(region = GameRegion)).convert('RGB')
+    array_scrshot = np.array(scrshot) / 255.5
     
-    if np.sum(np.absolute(pre_array_scrshot - array_scrshot)) < 0.03 * GameRegion[2] * GameRegion[3]:    
+    if np.sum(np.absolute(pre_array_scrshot - array_scrshot)) < 0.06 * GameRegion[2] * GameRegion[3]:    
         if len(scrshotList) == 0 :
             scrshotList.append(array_scrshot)
             print("map", saved_scrshot_count, "added")
@@ -48,7 +42,7 @@ while(True) :
                 d = np.sum(np.absolute(this_scrshot - array_scrshot))
                 if d < min_diff : min_diff = d
             
-            if min_diff > 0.08 * GameRegion[2] * GameRegion[3]:
+            if min_diff > 0.12 * GameRegion[2] * GameRegion[3]:
                 scrshotList.append(array_scrshot)
                 print("map", saved_scrshot_count, "added")
                 scrshot.save("map/" + str(saved_scrshot_count) + ".png")
