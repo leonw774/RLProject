@@ -14,7 +14,7 @@ class TrainingSetting() :
     shot_c = 3
     shot_shape = (1, shot_h, shot_w, shot_c)
     shot_resize = (shot_w, shot_h)
-    shot_intv_time = 0.005
+    shot_intv_time = 0.001
     shot_wait_max = 20
     noise_range = 0.01
     
@@ -40,24 +40,26 @@ class TrainingSetting() :
     # end get_game_region
 
     # Q NET SETTING
-    model_input_shape = (shot_h, shot_w, shot_c * shot_n)
-    
+    model_input_shape = (shot_h, shot_w, shot_c * shot_n)    
     
     # REWARD SETTING
     mapname_list = sorted(os.listdir("map/"), key = sorting_filename_as_int)
-    gamma = 0.36787944117 # 1 / exp(1)
+    
     move_much_thrshld = shot_h * shot_w * shot_c * (0.07 + 2 * noise_range) * ((shot_c - 1) * 0.01 + 1) # 0.09
     no_move_thrshld = shot_h * shot_w * shot_c * 0.03 * ((shot_c - 1) * 0.01 + 1)
-    stuck_countdown = 125
-    stuck_thrshld = 120
-    total_r = len(mapname_list)
+    
+    stuck_countdown = 120
+    stuck_thrshld = 100
+    
+    gamma = 0.5
+    total_r = 100
 
     # ACTION SETTIN
     mouse_straight_angles = 12
     mouse_round_angles = 4
     actions_num = (mouse_straight_angles + mouse_round_angles) * 2
     # {slow straight, fast straight, clockwise round, ccwise round}
-    do_control_pause = 0.01
+    do_control_pause = 0.04
 
     # STEP QUEUE SETTING
     stepQueue_length_max = 10000 # set 0 to be no limit
@@ -66,8 +68,11 @@ class TrainingSetting() :
     epsilon = 1.0
     eps_min = 0.2
     eps_decay = 0.996
-    epoches = 200
-    steps_epoch = 500
+    
+    use_p_normalizeation = True
+    
+    epoches = 300
+    steps_epoch = 600
     train_thrshld = 80
     steps_train = 8
     train_size = 64
@@ -75,6 +80,6 @@ class TrainingSetting() :
     
     no_reward_break = False
     
-    eps_test = 0.2
+    eps_test = 0.1
     steps_test = 500
     

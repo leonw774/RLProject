@@ -19,7 +19,7 @@ class Train() :
         
         self.GameRegion = set.get_game_region("Getting Over It")
         self.directInput = Keys()
-        self.model_optimizer = optimizers.sgd(lr = 0.01, momentum = 0.5, decay = 1e-8)
+        self.model_optimizer = optimizers.sgd(lr = 0.1, decay = 1e-8)
         
         self.Q = QNet(set.model_input_shape, set.actions_num)
         self.Q.summary()
@@ -55,7 +55,7 @@ class Train() :
             cur = screenshot(region = self.GameRegion).convert('RGB').resize(set.shot_resize, resample = Image.NEAREST)
             if np.sum(np.array(cur)) < 256 :
                 continue
-            if np.sum(np.absolute((np.array(pre) - np.array(cur)) / 256.0)) < 32 * set.no_move_thrshld :
+            if np.sum(np.absolute((np.array(pre) - np.array(cur)) / 256.0)) < 36 * set.no_move_thrshld :
                 break
         
         if set.shot_c == 1 :
@@ -81,7 +81,7 @@ class Train() :
         
         if id < set.mouse_straight_angles * 2 :
             # is straight
-            slow_distance = 800 # pixels
+            slow_distance = 1000 # pixels
             fast_distance = 4000 # pixels
             slow_delta = 3 # pixels
             fast_delta = 30
@@ -99,11 +99,11 @@ class Train() :
                 self.directInput.directMouse(d_x, d_y)
                 sleep(intv_time)
             if id >= set.mouse_straight_angles :
-                sleep(0.02)
+                sleep(0.04)
         else :
             # is round
             id -= set.mouse_straight_angles * 2
-            radius = 450
+            radius = 540
             circle_divide = 36
             v = int(2 * (radius**2) * (1 - math.cos(1.0 / circle_divide))) 
             delta = 9
@@ -116,7 +116,6 @@ class Train() :
                 for j in range(v // delta + 1) :
                     self.directInput.directMouse(d_x, d_y)
                     sleep(intv_time)
-        
         sleep(set.do_control_pause)
     # end def do_control()
     
@@ -169,9 +168,12 @@ class Train() :
                     if n == 0 :
                         cur_action = random.randint(0, set.actions_num - 1)
                     else :
-                        p_weight = n - stepQueue.getActionsOccurrence()
-                        p_weight = p_weight / p_weight.sum()
-                        cur_action = np.random.choice(np.arange(set.actions_num), p = p_weight)
+                        if set.use_p_normalizeation :
+                            p_weight = n - stepQueue.getActionsOccurrence()
+                            p_weight = p_weight / p_weight.sum()
+                            cur_action = np.random.choice(np.arange(set.actions_num), p = p_weight)
+                        else :
+                            cur_action = np.random.choice(np.arange(set.actions_num))
                 else :
                     cur_action = np.argmax(self.Q.predict(self.add_noise(input_shots)))
                 
@@ -183,7 +185,6 @@ class Train() :
                 if cur_reward == "stuck" :
                     sys.stdout.write(" at step " +  str(n) + ", ")
                     sys.stdout.flush()
-                    screenshot(region = self.GameRegion).save("stuck_at_epoch" + str(e) + ".png")
                     break
                 
                 total_reward += cur_reward
@@ -270,11 +271,16 @@ class Train() :
             
             if n <= set.shot_n or random.random() <= set.eps_test :
                 cur_action = random.randrange(set.actions_num)
+                print("choose", cur_action, "as random")
             else :
-                predict_Q = self.Q.predict(self.add_noise(input_shots))
-                #print(predict_Q)
-                cur_action = np.argmax(predict_Q)
-                print("choose", cur_action, "with max Q:", np.max(predict_Q))
+                predict_Q = np.squeeze(self.Q.predict(self.add_noise(input_shots)))
+                if predict_Q.sum() == 0 :
+                    cur_action = random.randrange(set.actions_num)
+                else :
+                    predict_Q_weight = predict_Q ** 2.718
+                    predict_Q_weight = predict_Q_weight / predict_Q_weight.sum()
+                    cur_action = np.random.choice(np.arange(set.actions_num), p = predict_Q_weight)
+                print("choose", cur_action, "with max Q:", predict_Q[cur_action])
                 
             self.do_control(cur_action)
             nxt_shot = self.get_screenshot()

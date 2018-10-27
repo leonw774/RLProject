@@ -23,11 +23,11 @@ class StepQueue() :
             self.mapList.append(array_map)
         
         self.r_per_map = set.total_r / len(self.mapList)
-        self.r_decline_rate = set.gamma ** (len(self.mapList) / set.steps_epoch)
+        self.r_incline_rate = (1 / set.gamma) ** (1 / len(self.mapList))
         
         print("no_move, move:", set.no_move_thrshld, set.move_much_thrshld)
-        print("r per map:", self.r_per_map)
-        print("r decline:", self.r_decline_rate)
+        print("r_per_map:", self.r_per_map)
+        print("_incline_rate:", self.r_incline_rate)
     
     def addStep(self, scrshot, action, reward, nxt_scrshot) :
         if len(self.scrshotList) + 1 == set.stepQueue_length_max :
@@ -108,10 +108,10 @@ class StepQueue() :
         #print(self.scrshotList[0].shape)
         
         min_pre_diff = 2147483648
-        min_pre_dist = -1
+        min_pre_map = -1
 
         min_cur_diff = 2147483648
-        min_cur_dist = -1
+        min_cur_map = -1
         
         diff_score = -1
         
@@ -128,20 +128,20 @@ class StepQueue() :
             
             if d < min_pre_diff :
                 min_pre_diff = d
-                min_pre_dist = this_step 
+                min_pre_map = this_step 
             
             d = np.sum(np.absolute(this_mapshot - cur_scrshot))
             if d < min_cur_diff :
                 min_cur_diff = d
-                min_cur_dist = this_step
+                min_cur_map = this_step
         
-        #print(min_pre_dist, "with", min_pre_diff, "to", min_cur_dist, "with", min_cur_diff)
+        #print(min_pre_map, "with", min_pre_diff, "to", min_cur_map, "with", min_cur_diff)
         
-        if min_cur_diff >= set.move_much_thrshld * 1.5 :
+        if min_cur_diff >= set.move_much_thrshld * 2 :
             # not in the map!
             return -0.0
-        elif min_pre_diff >= set.move_much_thrshld * 1.5 :
+        elif min_pre_diff >= set.move_much_thrshld * 2 :
             return set.gamma
         
-        return (min_cur_dist - min_pre_dist) * self.r_per_map
+        return (min_cur_map - min_pre_map) * self.r_per_map * (selfr_incline_rate **max(min_pre_map, min_cur_map))
         
