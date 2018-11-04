@@ -41,8 +41,8 @@ class StepQueue() :
             return
         
         self.scrshotList.append(scrshot[0]) # np array
-        self.actionList.append(action) # int
-        self.rewardList.append(reward) # float
+        self.actionList.append(int(action)) # int
+        self.rewardList.append(reward) # np array (QNet's out)
         self.nxtScrshotsList.append(nxt_scrshot[0]) # np array
         self.actionsOccurrence[action] += 1 # record occurrence of actions
     
@@ -116,12 +116,9 @@ class StepQueue() :
         diff_score = -1
         
         if self.isStuck(cur_scrshot) == True :
-            sys.stdout.write("stuck")
-            sys.stdout.flush()
             return "stuck"
         
-        if np.sum(np.absolute(pre_scrshot - cur_scrshot)) < set.no_move_thrshld :
-            return 0.0
+        #if np.sum(np.absolute(pre_scrshot - cur_scrshot)) < set.no_move_thrshld : return 0.0
         
         for this_step, this_mapshot in enumerate(self.mapList) :
             d = np.sum(np.absolute(this_mapshot - pre_scrshot))
@@ -137,11 +134,12 @@ class StepQueue() :
         
         #print(min_pre_map, "with", min_pre_diff, "to", min_cur_map, "with", min_cur_diff)
         
-        if min_cur_diff >= set.move_much_thrshld * 2 :
+        #if min_cur_diff >= set.move_much_thrshld * 2 :
             # not in the map!
-            return -0.0
-        elif min_pre_diff >= set.move_much_thrshld * 2 :
-            return set.gamma
+        #    return 0.0
         
-        return (min_cur_map - min_pre_map) * self.r_per_map * (selfr_incline_rate **max(min_pre_map, min_cur_map))
+        for_or_back = self.r_incline_rate if (min_cur_map - min_pre_map) >= 0 else (1 / self.r_incline_rate)
+       
+        return min_cur_map * for_or_back
+        #return (min_cur_map - min_pre_map) * self.r_per_map * (self.r_incline_rate **max(min_pre_map, min_cur_map))
         
