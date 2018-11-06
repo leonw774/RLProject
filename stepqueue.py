@@ -138,7 +138,7 @@ class StepQueue() :
             # not in the map!
         #    return 0.0
         
-        for_or_back = self.r_incline_rate if (min_cur_map - min_pre_map) >= 0 else (1 / self.r_incline_rate)
+        for_or_back = self.r_incline_rate if (min_cur_map - min_pre_map) > 0 else (1 / self.r_incline_rate)
        
         return min_cur_map * for_or_back
         #return (min_cur_map - min_pre_map) * self.r_per_map * (self.r_incline_rate **max(min_pre_map, min_cur_map))

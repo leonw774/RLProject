@@ -14,7 +14,7 @@ class TrainingSetting() :
     shot_c = 3
     shot_shape = (1, shot_h, shot_w, shot_c)
     shot_resize = (shot_w, shot_h)
-    shot_intv_time = 0.001
+    shot_intv_time = 0.002
     shot_wait_max = 50
     noise_range = 0.01
     
@@ -47,11 +47,11 @@ class TrainingSetting() :
     move_much_thrshld = shot_h * shot_w * shot_c * (0.07 + 2 * noise_range) * ((shot_c - 1) * 0.01 + 1) # 0.09
     no_move_thrshld = shot_h * shot_w * shot_c * 0.03 * ((shot_c - 1) * 0.01 + 1)
     
-    stuck_countdown = 160
-    stuck_thrshld = 150
+    stuck_countdown = 100
+    stuck_thrshld = 90
     
     alpha = 0.9 # set to zero means no training
-    gamma = 0.367879
+    gamma = 0.5
     total_r = len(mapname_list)
 
     # ACTION SETTIN
@@ -66,13 +66,13 @@ class TrainingSetting() :
 
     # TRAINING SETTING
     epsilon = 1.0
-    eps_min = 0.25
+    eps_min = 0.5
     eps_decay = 0.999
     
     use_p_normalizeation = True
     
-    epoches = 240
-    steps_epoch = 500
+    epoches = 250
+    steps_epoch = 400
     train_thrshld = 49
     steps_train = 4
     train_size = 32
@@ -80,6 +80,6 @@ class TrainingSetting() :
     
     no_reward_break = False
     
-    eps_test = 0.1
-    steps_test = 500
+    eps_test = 0.25
+    steps_test = 400
     

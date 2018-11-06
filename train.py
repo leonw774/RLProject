@@ -19,7 +19,7 @@ class Train() :
         
         self.GameRegion = set.get_game_region("Getting Over It")
         self.directInput = Keys()
-        self.model_optimizer = optimizers.RMSprop(lr = 0.01, decay = 1e-6)
+        self.model_optimizer = optimizers.sgd(lr = 0.0001, momentum = 0.5) # decay = 1e-6)
         
         self.Q = QNet(set.model_input_shape, set.actions_num)
         self.Q.summary()
@@ -81,7 +81,7 @@ class Train() :
         
         if id < set.mouse_straight_angles * 2 :
             # is straight
-            slow_distance = 1600 # pixels
+            slow_distance = 2000 # pixels
             fast_distance = 4000 # pixels
             slow_delta = 3 # pixels
             fast_delta = 27
@@ -110,16 +110,19 @@ class Train() :
                 is_clockwise = -1
                 id -= set.mouse_round_angles * 2
             
-            if id < set.mouse_round_angles :
-                delta = 9
-            else :
-                delta = 16
+            if id < set.mouse_round_angles : # slow
+                radius = 540
+                delta = 6
+                propotion = 0.75
+            else : # fast
+                radius = 640
+                delta = 18
+                propotion = 0.6
             
-            radius = 540
             circle_divide = 36
             v = int(2 * (radius**2) * (1 - math.cos(1.0 / circle_divide))) 
             
-            for i in range(int(circle_divide * 0.75)) : 
+            for i in range(int(circle_divide * propotion)) : 
                 angle = 2 * math.pi * (id / set.mouse_round_angles + i / float(circle_divide))
                 d_x = math.ceil(math.cos(angle) * delta) * is_clockwise
                 d_y = math.ceil(math.sin(angle) * delta) * is_clockwise
@@ -173,11 +176,12 @@ class Train() :
 
                 # make action
                 if n <= set.shot_n or random.random() < this_epoch_epsilon :
-                    if n == 0 :
+                    if n <= 1 :
                         cur_action = random.randint(0, set.actions_num - 1)
                     else :
                         if set.use_p_normalizeation :
-                            p_weight = n - stepQueue.getActionsOccurrence()
+                            p_weight = stepQueue.getActionsOccurrence()
+                            p_weight = p_weight.sum() - p_weight
                             p_weight = p_weight / p_weight.sum()
                             cur_action = np.random.choice(np.arange(set.actions_num), p = p_weight)
                         else :
@@ -202,7 +206,7 @@ class Train() :
                 
                 if stepQueue.getLength() > set.train_size and n > set.train_thrshld and n % set.steps_train == 0 :
                     # Experience Replay
-                    random_step = random.randint(set.shot_n + 1, stepQueue.getLength() - set.train_size - 1)
+                    random_step = random.randint(set.shot_n, stepQueue.getLength() - set.train_size)
                     trn_cur_shots, trn_actions, trn_rewards, _ = stepQueue.getStepsAsArray(random_step, set.train_size)
                     train_input_shots = np.zeros((set.train_size, set.shot_h, set.shot_w, set.shot_c * set.shot_n))
                     
@@ -234,8 +238,8 @@ class Train() :
                     
             # end for(STEP_PER_EPOCH)
             
-            print("end epoch", e, "end of reward:", cur_reward, "loss:", loss[0])
-            stepQueue.clear()
+            print("end epoch", e, "eof reward:", cur_reward, "loss:", loss[0])
+            #stepQueue.clear()
             self.Q_target.save("Q_target_model.h5")
             # Restart Game...
             self.quitgame()
@@ -253,7 +257,6 @@ class Train() :
         # click "NEW GAME"
         self.newgame()
         
-        stepQueue = StepQueue()
         input_shots = np.zeros((1, set.shot_h, set.shot_w, set.shot_c * set.shot_n))
         for n in range(set.steps_test) :
             cur_shot = self.get_screenshot()
@@ -265,22 +268,20 @@ class Train() :
                 print("choose", cur_action, "as random")
             else :
                 predict_Q = np.squeeze(self.Q.predict(self.add_noise(input_shots)))
-                '''
+                
                 if predict_Q.sum() == 0 :
                     cur_action = random.randrange(set.actions_num)
                 else :
-                    predict_Q_weight = predict_Q ** 2.718
+                    predict_Q_weight = predict_Q ** 3
                     predict_Q_weight = predict_Q_weight / predict_Q_weight.sum()
                     cur_action = np.random.choice(np.arange(set.actions_num), p = predict_Q_weight)
-                '''
-                cur_action = np.argmax(predict_Q)
+                
+                #cur_action = np.argmax(predict_Q)
                 #print(predict_Q)
                 print("choose", cur_action, "with max Q:", predict_Q[cur_action])
                 
             self.do_control(cur_action)
             nxt_shot = self.get_screenshot()
-            cur_reward = stepQueue.calReward(cur_shot, nxt_shot) # pre, cur
-            if cur_reward == "stuck" : break
             stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
         
         del stepQueue
