@@ -163,7 +163,7 @@ class Train() :
             self.newgame()
             
             this_epoch_epsilon = max(set.eps_min, set.epsilon * (set.eps_decay ** e), random.random())
-            input_shots = np.zeros((1, set.shot_h, set.shot_w, set.shot_c * set.shot_n))
+            in_shot = np.zeros((1, set.shot_h, set.shot_w, set.shot_c * set.shot_n))
 
             for n in range(set.steps_epoch) :
                 if (n + 1) % (set.steps_epoch / 10) == 0 :
@@ -171,23 +171,23 @@ class Train() :
                     sys.stdout.flush()
                 
                 cur_shot = self.get_screenshot(wait_no_move = False)
-                input_shots[:,:,:, : -set.shot_c] = input_shots[:,:,:, set.shot_c : ] # dequeue
-                input_shots[:,:,:, -set.shot_c : ] = cur_shot # enqueue
+                in_shot[:,:,:, : -set.shot_c] = in_shot[:,:,:, set.shot_c : ] # dequeue
+                in_shot[:,:,:, -set.shot_c : ] = cur_shot # enqueue
 
                 # make action
                 if n <= set.shot_n or random.random() < this_epoch_epsilon :
                     if n <= 1 :
-                        cur_action = random.randint(0, set.actions_num - 1)
+                        cur_action = random.randrange(set.actions_num - 1)
                     else :
                         if set.use_p_normalizeation :
-                            p_weight = stepQueue.getActionsOccurrence()
-                            p_weight = p_weight.sum() - p_weight
-                            p_weight = p_weight / p_weight.sum()
-                            cur_action = np.random.choice(np.arange(set.actions_num), p = p_weight)
+                            weight = stepQueue.getActionsOccurrence()
+                            weight = weight.max() - weight
+                            weight = weight / weight.sum()
+                            cur_action = np.random.choice(np.arange(set.actions_num), p = weight)
                         else :
                             cur_action = np.random.choice(np.arange(set.actions_num))
                 else :
-                    cur_action = np.argmax(self.Q.predict(self.add_noise(input_shots)))
+                    cur_action = np.argmax(self.Q.predict(self.add_noise(in_shot)))
                 
                 self.do_control(cur_action)
                 
@@ -208,28 +208,27 @@ class Train() :
                     # Experience Replay
                     random_step = random.randint(set.shot_n, stepQueue.getLength() - set.train_size)
                     trn_cur_shots, trn_actions, trn_rewards, _ = stepQueue.getStepsAsArray(random_step, set.train_size)
-                    train_input_shots = np.zeros((set.train_size, set.shot_h, set.shot_w, set.shot_c * set.shot_n))
+                    trn_in_shot = np.zeros((set.train_size, set.shot_h, set.shot_w, set.shot_c * set.shot_n))
                     
                     # make next predicted reward array and train input array at same time
                     new_rewards = np.zeros((set.train_size, set.actions_num))
                     for j in range(set.train_size) :
                         if j < set.shot_n - 1 :
-                            train_input_shots[j,:,:, : -set.shot_c] = stepQueue.getShotsAsArray(random_step - set.shot_n, set.shot_n - 1)
+                            trn_in_shot[j,:,:, : -set.shot_c] = stepQueue.getShotsAsArray(random_step - set.shot_n, set.shot_n - 1)
                         else :
-                            train_input_shots[j,:,:, : -set.shot_c] = train_input_shots[j - 1,:,:, set.shot_c : ]
-                        train_input_shots[j,:,:, -set.shot_c : ] = trn_cur_shots[j]
-                        train_input_shots[j] = self.add_noise(train_input_shots[j])
-                        this_train_input_shots = np.expand_dims(train_input_shots[j], axis = 0)
+                            trn_in_shot[j,:,:, : -set.shot_c] = trn_in_shot[j - 1,:,:, set.shot_c : ]
+                        trn_in_shot[j,:,:, -set.shot_c : ] = trn_cur_shots[j]
+                        trn_in_shot[j] = self.add_noise(trn_in_shot[j])
                         if set.steps_update_target > 0 :
-                            new_rewards[j] = self.Q.predict(this_train_input_shots)
+                            new_rewards[j] = self.Q.predict(np.expand_dims(trn_in_shot[j], axis = 0))
                         else :
-                            new_rewards[j] = self.Q_target.predict(this_train_input_shots)
+                            new_rewards[j] = self.Q_target.predict(np.expand_dims(trn_in_shot[j], axis = 0))
                         new_rewards[j, trn_actions[j]] = (trn_rewards[j] * (1 - set.alpha)) + (trn_rewards[j] + (new_rewards[j, trn_actions[j]] * set.gamma)) * set.alpha
                         # Q_new = r * (1 - alpha) + (r + Q_predict(a,s) * gamma) * alpha
                     
                     #print("new_rewards\n", new_rewards[0])
                     
-                    loss = self.Q.train_on_batch(train_input_shots, new_rewards)
+                    loss = self.Q.train_on_batch(trn_in_shot, new_rewards)
                     
                 if set.steps_update_target > 0 and n % set.steps_update_target == 0 and n > set.train_thrshld :
                     #print("assign Qtarget")
@@ -257,17 +256,17 @@ class Train() :
         # click "NEW GAME"
         self.newgame()
         
-        input_shots = np.zeros((1, set.shot_h, set.shot_w, set.shot_c * set.shot_n))
+        in_shot = np.zeros((1, set.shot_h, set.shot_w, set.shot_c * set.shot_n))
         for n in range(set.steps_test) :
             cur_shot = self.get_screenshot()
-            input_shots[:,:,:, : -set.shot_c] = input_shots[:,:,:, set.shot_c: ] # dequeue
-            input_shots[:,:,:, -set.shot_c : ] = cur_shot # enqueue
+            in_shot[:,:,:, : -set.shot_c] = in_shot[:,:,:, set.shot_c: ] # dequeue
+            in_shot[:,:,:, -set.shot_c : ] = cur_shot # enqueue
             
             if n <= set.shot_n or random.random() <= set.eps_test :
                 cur_action = random.randrange(set.actions_num)
                 print("choose", cur_action, "as random")
             else :
-                predict_Q = np.squeeze(self.Q.predict(self.add_noise(input_shots)))
+                predict_Q = np.squeeze(self.Q.predict(self.add_noise(in_shot)))
                 
                 if predict_Q.sum() == 0 :
                     cur_action = random.randrange(set.actions_num)
