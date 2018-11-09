@@ -9,12 +9,12 @@ class TrainingSetting() :
     
     # SCREENSHOTS SETTING
     shot_n = 1
-    shot_w = 108
-    shot_h = 72
+    shot_w = 120
+    shot_h = 80
     shot_c = 3
     shot_shape = (1, shot_h, shot_w, shot_c)
     shot_resize = (shot_w, shot_h)
-    shot_intv_time = 0.002
+    shot_intv_time = 0.004
     shot_wait_max = 50
     noise_range = 0.01
     
@@ -47,8 +47,8 @@ class TrainingSetting() :
     move_much_thrshld = shot_h * shot_w * shot_c * (0.07 + 2 * noise_range) * ((shot_c - 1) * 0.01 + 1) # 0.09
     no_move_thrshld = shot_h * shot_w * shot_c * 0.03 * ((shot_c - 1) * 0.01 + 1)
     
-    stuck_countdown = 100
-    stuck_thrshld = 90
+    stuck_countdown = 110
+    stuck_thrshld = 100
     
     alpha = 0.9 # set to zero means no training
     gamma = 0.5
@@ -56,23 +56,23 @@ class TrainingSetting() :
 
     # ACTION SETTIN
     mouse_straight_angles = 12
-    mouse_round_angles = 4
+    mouse_round_angles = 6
     actions_num = (mouse_straight_angles + mouse_round_angles * 2) * 2
     # {slow straight, fast straight, cwise round slow / fast, ccwise round slow / fast}
     do_control_pause = 0.03
 
     # STEP QUEUE SETTING
-    stepQueue_length_max = 10000 # set 0 to be no limit
+    stepQueue_length_max = 4000 # set 0 to be no limit
 
     # TRAINING SETTING
     epsilon = 1.0
-    eps_min = 0.5
-    eps_decay = 0.999
+    eps_min = 0.2
+    eps_decay = 0.998
     
-    use_p_normalizeation = True
+    use_p_normalizeation = False
     
-    epoches = 250
-    steps_epoch = 400
+    epoches = 400
+    steps_epoch = 250
     train_thrshld = 49
     steps_train = 4
     train_size = 32
@@ -80,6 +80,16 @@ class TrainingSetting() :
     
     no_reward_break = False
     
-    eps_test = 0.25
+    eps_test = 0.1
     steps_test = 400
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     

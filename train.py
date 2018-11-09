@@ -112,23 +112,24 @@ class Train() :
             
             if id < set.mouse_round_angles : # slow
                 radius = 540
-                delta = 6
-                propotion = 0.75
+                delta = 5
+                proportion = 0.75
             else : # fast
                 radius = 640
-                delta = 18
-                propotion = 0.6
+                delta = 20
+                proportion = 0.55
             
             circle_divide = 36
-            v = int(2 * (radius**2) * (1 - math.cos(1.0 / circle_divide))) 
+            edge_leng = int(2 * (radius**2) * (1 - math.cos(1.0 / circle_divide))) 
             
-            for i in range(int(circle_divide * propotion)) : 
+            for i in range(int(circle_divide * proportion)) : 
                 angle = 2 * math.pi * (id / set.mouse_round_angles + i / float(circle_divide))
                 d_x = math.ceil(math.cos(angle) * delta) * is_clockwise
                 d_y = math.ceil(math.sin(angle) * delta) * is_clockwise
-                for j in range(v // delta + 1) :
+                for j in range(edge_leng // delta) :
                     self.directInput.directMouse(d_x, d_y)
                     sleep(intv_time)
+            sleep(0.02)
         sleep(set.do_control_pause)
     # end def do_control()
     
@@ -164,6 +165,7 @@ class Train() :
             
             this_epoch_epsilon = max(set.eps_min, set.epsilon * (set.eps_decay ** e), random.random())
             input_shots = np.zeros((1, set.shot_h, set.shot_w, set.shot_c * set.shot_n))
+            loss = 0
 
             for n in range(set.steps_epoch) :
                 if (n + 1) % (set.steps_epoch / 10) == 0 :
@@ -229,7 +231,7 @@ class Train() :
                     
                     #print("new_rewards\n", new_rewards[0])
                     
-                    loss = self.Q.train_on_batch(train_input_shots, new_rewards)
+                    loss += self.Q.train_on_batch(train_input_shots, new_rewards)[0] / set.steps_epoch
                     
                 if set.steps_update_target > 0 and n % set.steps_update_target == 0 and n > set.train_thrshld :
                     #print("assign Qtarget")
@@ -238,7 +240,7 @@ class Train() :
                     
             # end for(STEP_PER_EPOCH)
             
-            print("end epoch", e, "eof reward:", cur_reward, "loss:", loss[0])
+            print("end epoch", e, "of reward:", cur_reward, "loss:", loss)
             #stepQueue.clear()
             self.Q_target.save("Q_target_model.h5")
             # Restart Game...
@@ -256,6 +258,7 @@ class Train() :
         
         # click "NEW GAME"
         self.newgame()
+        stepQueue = StepQueue()
         
         input_shots = np.zeros((1, set.shot_h, set.shot_w, set.shot_c * set.shot_n))
         for n in range(set.steps_test) :
@@ -282,10 +285,8 @@ class Train() :
                 
             self.do_control(cur_action)
             nxt_shot = self.get_screenshot()
-            stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
         
-        del stepQueue
-        print("eval end, end of reward:", cur_reward)
+        print("eval end, at reward of", stepQueue.calReward(cur_shot, cur_shot))
         screenshot(region = self.GameRegion).save("eval_scrshot.png")
         
         # Exit Game...
