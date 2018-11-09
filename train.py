@@ -164,12 +164,8 @@ class Train() :
             self.newgame()
             
             this_epoch_epsilon = max(set.eps_min, set.epsilon * (set.eps_decay ** e), random.random())
-<<<<<<< HEAD
-            input_shots = np.zeros((1, set.shot_h, set.shot_w, set.shot_c * set.shot_n))
+            in_shots = np.zeros((1, set.shot_h, set.shot_w, set.shot_c * set.shot_n))
             loss = 0
-=======
-            in_shot = np.zeros((1, set.shot_h, set.shot_w, set.shot_c * set.shot_n))
->>>>>>> 44e782101006d07d5690061095a7f30f293367c3
 
             for n in range(set.steps_epoch) :
                 if (n + 1) % (set.steps_epoch / 10) == 0 :
