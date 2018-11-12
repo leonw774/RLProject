@@ -89,11 +89,13 @@ class StepQueue() :
         
     def getCurMap(self, scrshot) :
         min_diff = 2147483648
+        cur_map = -1
         for this_mapnum, this_mapshot in enumerate(self.mapList) :
-            if np.sum(np.absolute(this_mapshot - scrshot)) <= min_diff :
+            d = np.sum(np.absolute(this_mapshot - scrshot))
+            if d <= min_diff :
                 min_diff = d
-                if this_mapnum > at_map : at_map = this_mapnum
-        return at_map
+                if this_mapnum > cur_map : cur_map = this_mapnum
+        return cur_map
     
     def isStuck(self, cur_scrshot) :
         OH_NO_YOURE_STUCK = 0

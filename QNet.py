@@ -12,7 +12,7 @@ def QNet(scrshot_size, action_size) :
     x = Conv2D(128, (3, 3), padding = "valid", activation = "relu")(x)
     x = Flatten()(x)
     x = Dense(256, activation = "relu")(x)
-    scores = Dense(action_size, activation = "relu")(x)
+    scores = Dense(action_size)(x)
     model = Model(input_scrshots, scores)
     model.summary()
     return model

@@ -234,7 +234,7 @@ class Train() :
                     
             # end for(STEP_PER_EPOCH)
             
-            print("end epoch", e, "at map:", stepQueue.getCurMap(cur_shot), "total_r:", total_reward, "loss: %.4f", loss)
+            print("end epoch &d at map %d, total_r: %.3f, loss: %.4f" % (e, stepQueue.getCurMap(cur_shot), total_reward, loss))
             #stepQueue.clear()
             self.Q_target.save("Q_target_model.h5")
             # Restart Game...
