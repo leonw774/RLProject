@@ -1,8 +1,6 @@
 import sys
 import train
 
-end_reward_list = []
-
 print("how many eval will ran:")
 c = int(input())
 

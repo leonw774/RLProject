@@ -111,11 +111,11 @@ class Train() :
                 id -= set.mouse_round_angles * 2
             
             if id < set.mouse_round_angles : # slow
-                radius = 540
+                radius = 560
                 delta = 4
                 proportion = 0.8
             else : # fast
-                radius = 640
+                radius = 700
                 delta = 16
                 proportion = 0.65
             
@@ -164,7 +164,7 @@ class Train() :
             
             self.newgame()
             
-            this_epoch_epsilon = max(set.eps_min, set.epsilon * (set.eps_decay ** e), random.random())
+            this_epoch_eps = max(set.eps_min, set.epsilon * (set.eps_decay ** e), random.random())
             loss = 0
 
             for n in range(set.steps_epoch) :
@@ -175,7 +175,7 @@ class Train() :
                 cur_shot = self.get_screenshot(wait_no_move = False)
 
                 # make action
-                if random.random() < this_epoch_epsilon :
+                if random.random() < this_epoch_eps :
                     if n <= 1 :
                         cur_action = random.randrange(set.actions_num - 1)
                     else :
@@ -201,12 +201,12 @@ class Train() :
                     break
                 cur_reward = tmp_reward
                 
-                if set.ignore_zero_reward and random.random < (this_epoch_epsilon - set.eps_min) and cur_reward == 0
-                stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
+                if set.ignore_zero_reward and random.random() >= (this_epoch_eps - set.eps_min) or cur_reward != 0 :
+                    stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
                 
                 if (stepQueue.getLength() > set.train_size or n > set.train_thrshld) and n % set.steps_train == 0 :
                     # Experience Replay
-                    random_step = random.randint(set.shot_n, stepQueue.getLength() - set.train_size)
+                    random_step = random.randint(1, stepQueue.getLength() - set.train_size)
                     trn_cur_shot, trn_actions, trn_rewards, trn_nxt_shot = stepQueue.getStepsAsArray(random_step, set.train_size)
                     
                     # make next predicted reward array and train input array at same time
@@ -217,8 +217,8 @@ class Train() :
                             new_rewards[j] = self.Q.predict(np.expand_dims(trn_nxt_shot[j], axis = 0))
                         else :
                             new_rewards[j] = self.Q_target.predict(np.expand_dims(trn_nxt_shot[j], axis = 0))
-                        new_rewards[j, trn_actions[j]] = (trn_rewards[j] * (1 - set.alpha)) + (trn_rewards[j] + (new_rewards[j, trn_actions[j]] * set.gamma)) * set.alpha
-                        # Q_new = r * (1 - alpha) + (r + Q_predict(a,s) * gamma) * alpha
+                        new_rewards[j, trn_actions[j]] = trn_rewards[j] + new_rewards[j, trn_actions[j]] * set.gamma
+                        # Q_new = r + Q_predict(a,s) * gamma
                     
                     #print("new_rewards\n", new_rewards[0])
                     
@@ -255,17 +255,14 @@ class Train() :
             stepQueue = StepQueue()
             cur_shot = self.get_screenshot() 
             
-            in_shots = np.zeros((1, set.shot_h, set.shot_w, set.shot_c * set.shot_n))
             for n in range(set.steps_test) :
                 cur_shot = self.get_screenshot()
-                in_shots[:,:,:, : -set.shot_c] = in_shots[:,:,:, set.shot_c: ] # dequeue
-                in_shots[:,:,:, -set.shot_c : ] = cur_shot # enqueue
                 
-                if n <= set.shot_n or random.random() <= set.eps_test :
+                if random.random() <= set.eps_test :
                     cur_action = random.randrange(set.actions_num)
                     print("choose", cur_action, "as random")
                 else :
-                    predict_Q = np.squeeze(self.Q.predict(self.add_noise(in_shots)))
+                    predict_Q = np.squeeze(self.Q.predict(self.add_noise(cur_shot)))
                     
                     if predict_Q.sum() == 0 :
                         cur_action = random.randrange(set.actions_num)
@@ -325,8 +322,8 @@ if __name__ == '__main__' :
     train = Train()
     train.count_down(3)
     starttime = datetime.now()
-    #train.random_action()
-    train.fit()
+    train.random_action()
+    #train.fit()
     print(datetime.now() - starttime)
     train.eval("Q_target_model.h5")
     

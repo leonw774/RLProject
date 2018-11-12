@@ -59,9 +59,6 @@ class StepQueue() :
     def getStepsAsArray(self, beg, size = 1) :
         to = beg + size
         return np.array(self.scrshotList[beg:to]), np.array(self.actionList[beg:to]), np.array(self.rewardList[beg:to]), np.array(self.nxtScrshotsList[beg:to])
-    
-    def getRandomTrainingStepsAsArray(self, size) :
-        return 0
         
     def getShotsAsArray(self, beg, size = 1) :
         try :
@@ -105,7 +102,7 @@ class StepQueue() :
     def calReward(self, pre_scrshot, cur_scrshot) :
         pre_scrshot = pre_scrshot[0] # before action
         cur_scrshot = cur_scrshot[0] # after action
-        if len(self.scrshotList) <= set.shot_n : return 0.0
+        if len(self.scrshotList) < 2 : return 0.0
         
         #print(cur_scrshot.shape)
         #print(self.scrshotList[0].shape)
@@ -115,8 +112,6 @@ class StepQueue() :
 
         min_cur_diff = 2147483648
         cur_map = -1
-        
-        diff_score = -1
         
         if self.isStuck(cur_scrshot) == True :
             return "stuck"
