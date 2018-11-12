@@ -8,7 +8,6 @@ def sorting_filename_as_int(element) :
 class TrainingSetting() :
     
     # SCREENSHOTS SETTING
-    shot_n = 1
     shot_w = 120
     shot_h = 80
     shot_c = 3
@@ -40,18 +39,18 @@ class TrainingSetting() :
     # end get_game_region
 
     # Q NET SETTING
-    model_input_shape = (shot_h, shot_w, shot_c * shot_n)    
+    model_input_shape = (shot_h, shot_w, shot_c)    
     
     # REWARD SETTING
     mapname_list = sorted(os.listdir("map/"), key = sorting_filename_as_int)
     move_much_thrshld = shot_h * shot_w * shot_c * (0.07 + 2 * noise_range) * ((shot_c - 1) * 0.01 + 1) # 0.09
     no_move_thrshld = shot_h * shot_w * shot_c * 0.03 * ((shot_c - 1) * 0.01 + 1)
     
-    stuck_countdown = 110
-    stuck_thrshld = 100
+    stuck_countdown = 100
+    stuck_thrshld = 90
     
-    alpha = 0.9 # set to zero means no training
-    gamma = 0.5
+    alpha = 0.99 # set to zero means no training
+    gamma = 0.36788
     total_r = len(mapname_list)
 
     # ACTION SETTIN
@@ -62,26 +61,27 @@ class TrainingSetting() :
     do_control_pause = 0.03
 
     # STEP QUEUE SETTING
-    stepQueue_length_max = 4000 # set 0 to be no limit
+    stepQueue_length_max = 8000 # set 0 to be no limit
 
     # TRAINING SETTING
     epsilon = 1.0
     eps_min = 0.2
-    eps_decay = 0.998
+    eps_decay = 0.999
     
     use_p_normalizeation = False
+    ignore_zero_reward = True
     
-    epoches = 400
-    steps_epoch = 250
-    train_thrshld = 49
+    epoches = 600
+    steps_epoch = 300
+    train_thrshld = 81
     steps_train = 4
-    train_size = 32
-    steps_update_target = 50 # set to 0 to disable
+    train_size = 64
+    steps_update_target = 80 # set to 0 to disable
     
     no_reward_break = False
     
     eps_test = 0.1
-    steps_test = 400
+    steps_test = 200
     
     
     

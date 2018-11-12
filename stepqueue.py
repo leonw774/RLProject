@@ -55,10 +55,13 @@ class StepQueue() :
         
     def getLength(self) :
         return len(self.scrshotList)
-            
+    
     def getStepsAsArray(self, beg, size = 1) :
         to = beg + size
         return np.array(self.scrshotList[beg:to]), np.array(self.actionList[beg:to]), np.array(self.rewardList[beg:to]), np.array(self.nxtScrshotsList[beg:to])
+    
+    def getRandomTrainingStepsAsArray(self, size) :
+        return 0
         
     def getShotsAsArray(self, beg, size = 1) :
         try :
@@ -91,7 +94,7 @@ class StepQueue() :
         OH_NO_YOURE_STUCK = 0
         STUCK_COUNTDOWN = set.stuck_countdown
         
-        for this_step, this_scrshot in enumerate(reversed(self.scrshotList[-STUCK_COUNTDOWN:])) :
+        for this_map, this_scrshot in enumerate(reversed(self.scrshotList[-STUCK_COUNTDOWN:])) :
             if np.sum(np.absolute(this_scrshot - cur_scrshot)) <= set.no_move_thrshld and STUCK_COUNTDOWN > 0 :
                 OH_NO_YOURE_STUCK += 1
             else :
@@ -102,16 +105,16 @@ class StepQueue() :
     def calReward(self, pre_scrshot, cur_scrshot) :
         pre_scrshot = pre_scrshot[0] # before action
         cur_scrshot = cur_scrshot[0] # after action
-        if len(self.scrshotList) <= 2 : return 0.0
+        if len(self.scrshotList) <= set.shot_n : return 0.0
         
         #print(cur_scrshot.shape)
         #print(self.scrshotList[0].shape)
         
         min_pre_diff = 2147483648
-        min_pre_map = -1
+        pre_map = -1
 
         min_cur_diff = 2147483648
-        min_cur_map = -1
+        cur_map = -1
         
         diff_score = -1
         
@@ -120,26 +123,27 @@ class StepQueue() :
         
         #if np.sum(np.absolute(pre_scrshot - cur_scrshot)) < set.no_move_thrshld : return 0.0
         
-        for this_step, this_mapshot in enumerate(self.mapList) :
+        for this_mapnum, this_mapshot in enumerate(self.mapList) :
             d = np.sum(np.absolute(this_mapshot - pre_scrshot))
-            
-            if d < min_pre_diff :
+            if d <= min_pre_diff :
                 min_pre_diff = d
-                min_pre_map = this_step 
+                if this_mapnum > pre_map : pre_map = this_mapnum
             
             d = np.sum(np.absolute(this_mapshot - cur_scrshot))
-            if d < min_cur_diff :
+            if d <= min_cur_diff :
                 min_cur_diff = d
-                min_cur_map = this_step
+                if this_mapnum > cur_map : cur_map = this_mapnum
         
-        #print(min_pre_map, "with", min_pre_diff, "to", min_cur_map, "with", min_cur_diff)
+        #print(pre_map, "with", min_pre_diff, "to", cur_map, "with", min_cur_diff)
         
         #if min_cur_diff >= set.move_much_thrshld * 2 :
-            # not in the map!
+            # not in the map!?
         #    return 0.0
         
-        for_or_back = self.r_incline_rate if (min_cur_map - min_pre_map) > 0 else (1 / self.r_incline_rate)
-       
-        return min_cur_map * for_or_back
-        #return (min_cur_map - min_pre_map) * self.r_per_map * (self.r_incline_rate **max(min_pre_map, min_cur_map))
+        if pre_map == cur_map :
+            return 0
+        else :
+            pre_score = (self.r_incline_rate * pre_map) ** self.r_incline_rate
+            cur_score = (self.r_incline_rate * cur_map) ** self.r_incline_rate
+            return (cur_score - pre_score)
         
