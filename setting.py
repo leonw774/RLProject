@@ -49,7 +49,6 @@ class TrainingSetting() :
     stuck_countdown = 100
     stuck_thrshld = 90
     
-    alpha = 0.99 # set to zero means no training
     gamma = 0.36788
     total_r = len(mapname_list)
 

@@ -204,7 +204,7 @@ class Train() :
                 cur_reward = tmp_reward
                 total_reward += cur_reward
                 
-                if !set.ignore_zero_reward or cur_reward != 0 or random.random() < (this_epoch_eps - set.eps_min):
+                if not set.ignore_zero_reward or cur_reward != 0 or random.random() < (this_epoch_eps - set.eps_min) :
                     stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
                 
                 if (stepQueue.getLength() > set.train_thrshld) and n % set.steps_train == 0 :
@@ -325,8 +325,8 @@ if __name__ == '__main__' :
     train = Train()
     train.count_down(3)
     starttime = datetime.now()
-    train.random_action()
-    #train.fit()
+    #train.random_action()
+    train.fit()
     print(datetime.now() - starttime)
     train.eval("Q_target_model.h5", 10)
     
