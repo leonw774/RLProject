@@ -102,7 +102,6 @@ class StepQueue() :
     def calReward(self, pre_scrshot, cur_scrshot) :
         pre_scrshot = pre_scrshot[0] # before action
         cur_scrshot = cur_scrshot[0] # after action
-        if len(self.scrshotList) < 2 : return 0.0
         
         #print(cur_scrshot.shape)
         #print(self.scrshotList[0].shape)

@@ -44,6 +44,7 @@ class Train() :
             sleep(1.0)
             
     def get_screenshot(self, wait_no_move = True, savefile = None) :
+        # return screen-shot of game in np array in shape of set.shot_shape
         array_scrshot = np.zeros(set.shot_shape)
         cur = screenshot(region = self.GameRegion).convert('RGB').resize(set.shot_resize)
         i = 0
@@ -117,7 +118,7 @@ class Train() :
             else : # fast
                 radius = 700
                 delta = 16
-                proportion = 0.65
+                proportion = 0.66
             
             circle_divide = 36.0
             angle_offset = 4.0
@@ -204,7 +205,7 @@ class Train() :
                 if set.ignore_zero_reward and random.random() >= (this_epoch_eps - set.eps_min) or cur_reward != 0 :
                     stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
                 
-                if (stepQueue.getLength() > set.train_size or n > set.train_thrshld) and n % set.steps_train == 0 :
+                if (stepQueue.getLength() > set.train_thrshld) and n % set.steps_train == 0 :
                     # Experience Replay
                     random_step = random.randint(1, stepQueue.getLength() - set.train_size)
                     trn_cur_shot, trn_actions, trn_rewards, trn_nxt_shot = stepQueue.getStepsAsArray(random_step, set.train_size)
@@ -322,9 +323,9 @@ if __name__ == '__main__' :
     train = Train()
     train.count_down(3)
     starttime = datetime.now()
-    train.random_action()
-    #train.fit()
+    #train.random_action()
+    train.fit()
     print(datetime.now() - starttime)
-    train.eval("Q_target_model.h5")
+    train.eval("Q_target_model.h5", 10)
     
 

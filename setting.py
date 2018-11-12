@@ -66,12 +66,12 @@ class TrainingSetting() :
     # TRAINING SETTING
     epsilon = 1.0
     eps_min = 0.2
-    eps_decay = 0.999
+    eps_decay = 0.998
     
     use_p_normalizeation = False
     ignore_zero_reward = True
     
-    epoches = 600
+    epoches = 500
     steps_epoch = 300
     train_thrshld = 81
     steps_train = 4
