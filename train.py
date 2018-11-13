@@ -201,6 +201,7 @@ class Train() :
                     sys.stdout.write(" at step " +  str(n) + "\t")
                     sys.stdout.flush()
                     break
+                
                 cur_reward = tmp_reward
                 # total_reward += cur_reward
                 

@@ -22,12 +22,13 @@ class StepQueue() :
                 array_map = np.array(map) / 255.5
             self.mapList.append(array_map)
         
-        self.r_per_map = set.total_r / len(self.mapList)
-        self.r_incline_rate = (1 / set.gamma) ** (1 / len(self.mapList))
+        self.map_score = set.total_r / len(self.mapList)
+        self.incline_rate = (1 / set.gamma) ** (1 / len(self.mapList))
+        # so that the reward of last map, after times gamma, is exactly equal to total_r
         
         print("no_move, move:", set.no_move_thrshld, set.move_much_thrshld)
-        print("r_per_map:", self.r_per_map)
-        print("_incline_rate:", self.r_incline_rate)
+        print("map_score:", self.map_score)
+        print("_incline_rate:", self.incline_rate)
     
     def addStep(self, scrshot, action, reward, nxt_scrshot) :
         if len(self.scrshotList) + 1 == set.stepQueue_length_max :
@@ -147,7 +148,8 @@ class StepQueue() :
         if pre_map == cur_map :
             return 0
         else :
-            pre_score = (self.r_incline_rate * pre_map) ** self.r_incline_rate
-            cur_score = (self.r_incline_rate * cur_map) ** self.r_incline_rate
-            return (cur_score - pre_score)
+            # r = m * n * (i ^ n)
+            pre_score = (self.map_score * pre_map * (self.incline_rate ** pre_map)
+            cur_score = (self.map_score * cur_map * (self.incline_rate ** pre_map)
+            return cur_score - pre_score
         
