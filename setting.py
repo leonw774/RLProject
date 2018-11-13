@@ -56,22 +56,23 @@ class TrainingSetting() :
     mouse_straight_angles = 12
     mouse_round_angles = 6
     actions_num = (mouse_straight_angles + mouse_round_angles * 2) * 2
-    # {slow straight, fast straight, cwise round slow / fast, ccwise round slow / fast}
+    # {slow straight(12), fast straight(12), cwise round slow / fast(12), ccwise round slow / fast(12)}
     do_control_pause = 0.03
 
     # STEP QUEUE SETTING
-    stepQueue_length_max = 8000 # set 0 to be no limit
+    stepQueue_length_max = 6000 # set 0 to be no limit
 
     # TRAINING SETTING
     epsilon = 1.0
-    eps_min = 0.2
+    eps_min = 0.25
     eps_decay = 0.998
     
     use_p_normalizeation = False
     ignore_zero_reward = True
+    ignore_zero_reward_p = 0.9
     
-    epoches = 500
-    steps_epoch = 300
+    epoches = 400
+    steps_epoch = 250
     train_thrshld = 81
     steps_train = 4
     train_size = 64
@@ -80,7 +81,7 @@ class TrainingSetting() :
     no_reward_break = False
     
     eps_test = 0.1
-    steps_test = 200
+    steps_test = 50
     
     
     

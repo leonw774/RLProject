@@ -198,13 +198,13 @@ class Train() :
                 
                 #print(cur_action, ",", cur_reward)
                 if tmp_reward == "stuck" :
-                    sys.stdout.write(" at step " +  str(n) + ", ")
+                    sys.stdout.write(" at step " +  str(n) + "\t")
                     sys.stdout.flush()
                     break
                 cur_reward = tmp_reward
-                total_reward += cur_reward
+                # total_reward += cur_reward
                 
-                if not set.ignore_zero_reward or cur_reward != 0 or random.random() < (this_epoch_eps - set.eps_min) :
+                if not set.ignore_zero_reward or cur_reward != 0 or random.random() < (set.ignore_zero_reward_p ** n) :
                     stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
                 
                 if (stepQueue.getLength() > set.train_thrshld) and n % set.steps_train == 0 :
@@ -215,12 +215,14 @@ class Train() :
                     # make next predicted reward array and train input array at same time
                     new_rewards = np.zeros((set.train_size, set.actions_num))
                     for j in range(set.train_size) :
-                        # the j-th 
                         if set.steps_update_target > 0 :
-                            new_rewards[j] = self.Q.predict(np.expand_dims(trn_nxt_shot[j], axis = 0))
+                            new_rewards[j] = self.Q.predict(np.expand_dims(trn_cur_shot[j], axis = 0))
+                            new_rewards[j, trn_actions[j]] = trn_rewards[j]
+                            new_rewards[j] += np.argmax(self.Q.predict(np.expand_dims(trn_nxt_shot[j], axis = 0))) * set.gamma
                         else :
                             new_rewards[j] = self.Q_target.predict(np.expand_dims(trn_nxt_shot[j], axis = 0))
-                        new_rewards[j, trn_actions[j]] = trn_rewards[j] + new_rewards[j, trn_actions[j]] * set.gamma
+                            new_rewards[j, trn_actions[j]] = trn_rewards[j]
+                            new_rewards[j] += np.argmax(self.Q_target.predict(np.expand_dims(trn_nxt_shot[j], axis = 0))) * set.gamma 
                         # Q_new = r + Q_predict(a,s) * gamma
                     
                     #print("new_rewards\n", new_rewards[0])
@@ -233,8 +235,7 @@ class Train() :
                     self.Q_target.save("Q_target_model.h5")
                     
             # end for(STEP_PER_EPOCH)
-            
-            print("end epoch &d at map %d, total_r: %.3f, loss: %.4f" % (e, stepQueue.getCurMap(cur_shot), total_reward, loss))
+            print("end epoch %d\tat map %d\tloss: %.4f" % (e, stepQueue.getCurMap(cur_shot), loss))
             #stepQueue.clear()
             self.Q_target.save("Q_target_model.h5")
             # Restart Game...
@@ -249,7 +250,7 @@ class Train() :
     def eval(self, model_weight_name, rounds = 1) :
         print("eval begin for:", model_weight_name)
         self.Q = load_model(model_weight_name)
-        end_reward_list = []
+        end_map_list = []
         
         for i in range(rounds) :
         
@@ -270,8 +271,8 @@ class Train() :
                     if predict_Q.sum() == 0 :
                         cur_action = random.randrange(set.actions_num)
                     else :
-                        w = predict_Q - predict_Q.min()
-                        w = w ** 2
+                        w = predict_Q
+                        w[w < 0] = 0.0
                         w /= w.sum()
                         cur_action = np.random.choice(np.arange(set.actions_num), p = w)
                     
@@ -282,16 +283,16 @@ class Train() :
                 self.do_control(cur_action)
                 nxt_shot = self.get_screenshot()
             
-            end_reward = stepQueue.calReward(cur_shot, self.get_screenshot())
-            end_reward_list.append(end_reward)
+            end_map = stepQueue.getCurMap(cur_shot)
+            end_map_list.append(end_map)
             
-            print("eval end, at reward of", end_reward)
-            screenshot(region = self.GameRegion).save("eval_scrshot.png")
+            print("eval end\tat map: ", end_map)
+            #screenshot(region = self.GameRegion).save("eval_scrshot.png")
         
             # Exit Game...
             self.quitgame()
         
-        print(end_reward_list)
+        print(end_map_list)
 
     # end def eval
     
@@ -328,6 +329,6 @@ if __name__ == '__main__' :
     #train.random_action()
     train.fit()
     print(datetime.now() - starttime)
-    train.eval("Q_target_model.h5", 10)
+    train.eval("Q_target_model.h5", 20)
     
 
