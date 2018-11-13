@@ -8,13 +8,13 @@ def sorting_filename_as_int(element) :
 class TrainingSetting() :
     
     # SCREENSHOTS SETTING
-    shot_w = 120
-    shot_h = 80
+    shot_w = 108
+    shot_h = 72
     shot_c = 3
     shot_shape = (1, shot_h, shot_w, shot_c)
     shot_resize = (shot_w, shot_h)
-    shot_intv_time = 0.004
-    shot_wait_max = 50
+    shot_intv_time = 0.01
+    shot_wait_max = 100
     noise_range = 0.01
     
     def get_game_region(title = None) :
@@ -46,10 +46,10 @@ class TrainingSetting() :
     move_much_thrshld = shot_h * shot_w * shot_c * (0.07 + 2 * noise_range) * ((shot_c - 1) * 0.01 + 1) # 0.09
     no_move_thrshld = shot_h * shot_w * shot_c * 0.03 * ((shot_c - 1) * 0.01 + 1)
     
-    stuck_countdown = 90
-    stuck_thrshld = 80
+    stuck_countdown = 50
+    stuck_thrshld = 40
     
-    gamma = 0.36788
+    gamma = 0.5
     total_r = len(mapname_list)
 
     # ACTION SETTIN
@@ -60,18 +60,18 @@ class TrainingSetting() :
     do_control_pause = 0.03
 
     # STEP QUEUE SETTING
-    stepQueue_length_max = 6000 # set 0 to be no limit
+    stepQueue_length_max = 4000 # set 0 to be no limit
 
     # TRAINING SETTING
     epsilon = 1.0
     eps_min = 0.25
-    eps_decay = 0.998
+    eps_decay = 0.995
     
     use_p_normalizeation = False
     ignore_zero_reward = True
-    ignore_zero_reward_p = 0.9
+    ignore_zero_reward_p = 0.99
     
-    epoches = 400
+    epoches = 200
     steps_epoch = 250
     train_thrshld = 81
     steps_train = 4

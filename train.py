@@ -19,7 +19,7 @@ class Train() :
         
         self.GameRegion = set.get_game_region("Getting Over It")
         self.directInput = Keys()
-        self.model_optimizer = optimizers.rmsprop(lr = 0.001) # decay = 1e-6)
+        self.model_optimizer = optimizers.sgd(lr = 0.01) # decay = 1e-6)
         
         self.Q = QNet(set.model_input_shape, set.actions_num)
         self.Q.summary()
@@ -49,15 +49,16 @@ class Train() :
         cur = screenshot(region = self.GameRegion).convert('RGB').resize(set.shot_resize)
         i = 0
         while(wait_no_move and i <= set.shot_wait_max) :
-            i += 1
             #print("waiting for no moving")
             sleep(set.shot_intv_time)
             pre = cur
             cur = screenshot(region = self.GameRegion).convert('RGB').resize(set.shot_resize)
-            if np.sum(np.array(cur)) < 256 :
+            if np.sum(np.array(cur)) <= 256 : # is black
+                sleep(1.0)
                 continue
             if np.sum(np.absolute((np.array(pre) - np.array(cur)) / 256.0)) < 33 * set.no_move_thrshld :
                 break
+            i += 1
         
         if set.shot_c == 1 :
             array_scrshot = np.reshape(np.array(cur.convert('L')) / 255.5, set.shot_shape)
@@ -83,7 +84,7 @@ class Train() :
         if id < set.mouse_straight_angles * 2 :
             # is straight
             slow_distance = 2400 # pixels
-            fast_distance = 4500 # pixels
+            fast_distance = 4200 # pixels
             slow_delta = 3 # pixels
             fast_delta = 27
         
@@ -116,18 +117,19 @@ class Train() :
                 delta = 4
                 proportion = 0.8
             else : # fast
-                radius = 700
-                delta = 16
+                radius = 720
+                delta = 18
                 proportion = 0.66
             
-            circle_divide = 36.0
-            angle_offset = 4.0
-            edge_leng = int(2 * (radius**2) * (1 - math.cos(1.0 / circle_divide))) 
+            angles_divide = 36.0
+            angle_bias = 4.0
+            angle_offset = id / set.mouse_round_angles + angle_bias / angles_divide
+            edge_leng = int(2 * (radius**2) * (1 - math.cos(1.0 / angles_divide))) 
             
-            for i in range(int(circle_divide * proportion)) : 
-                angle = 2 * math.pi * (id / set.mouse_round_angles + ((i + angle_offset) / circle_divide))
-                d_x = math.ceil(math.cos(angle) * delta) * is_clockwise
-                d_y = math.ceil(math.sin(angle) * delta) * is_clockwise
+            for i in range(int(angles_divide * proportion)) : 
+                angle = 2 * math.pi * (i * is_clockwise / angles_divide + angle_offset)
+                d_x = math.ceil(math.cos(angle) * delta)
+                d_y = math.ceil(math.sin(angle) * delta)
                 for j in range(edge_leng // delta) :
                     self.directInput.directMouse(d_x, d_y)
                     sleep(intv_time)
@@ -247,8 +249,8 @@ class Train() :
         
     # end def fit
     
-    def eval(self, model_weight_name, rounds = 1) :
-        print("eval begin for:", model_weight_name)
+    def test(self, model_weight_name, rounds = 1) :
+        print("test begin for:", model_weight_name)
         self.Q = load_model(model_weight_name)
         end_map_list = []
         
@@ -286,15 +288,15 @@ class Train() :
             end_map = stepQueue.getCurMap(cur_shot)
             end_map_list.append(end_map)
             
-            print("eval end\tat map: ", end_map)
-            #screenshot(region = self.GameRegion).save("eval_scrshot.png")
+            print("test end\tat map: ", end_map)
+            #screenshot(region = self.GameRegion).save("test_scrshot.png")
         
             # Exit Game...
             self.quitgame()
         
         print(end_map_list)
 
-    # end def eval
+    # end def test
     
     def random_action(self, steps = None) :
         # click "NEW GAME"
@@ -315,7 +317,7 @@ class Train() :
             stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
         
         del stepQueue
-        print("eval end, of reward: %.2f", cur_reward)
+        print("test end, of reward: %.2f", cur_reward)
         # Exit Game...
         self.quitgame()
     # end def
@@ -329,6 +331,6 @@ if __name__ == '__main__' :
     #train.random_action()
     train.fit()
     print(datetime.now() - starttime)
-    train.eval("Q_target_model.h5", 20)
+    train.test("Q_target_model.h5", 20)
     
 
