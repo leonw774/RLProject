@@ -149,7 +149,7 @@ class StepQueue() :
             return 0
         else :
             # r = m * n * (i ^ n)
-            pre_score = (self.map_score * pre_map * (self.incline_rate ** pre_map)
-            cur_score = (self.map_score * cur_map * (self.incline_rate ** pre_map)
+            pre_score = self.map_score * pre_map * (self.incline_rate ** pre_map)
+            cur_score = self.map_score * cur_map * (self.incline_rate ** pre_map)
             return cur_score - pre_score
         

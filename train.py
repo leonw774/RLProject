@@ -218,11 +218,11 @@ class Train() :
                         if set.steps_update_target > 0 :
                             new_rewards[j] = self.Q.predict(np.expand_dims(trn_cur_shot[j], axis = 0))
                             new_rewards[j, trn_actions[j]] = trn_rewards[j]
-                            new_rewards[j] += np.argmax(self.Q.predict(np.expand_dims(trn_nxt_shot[j], axis = 0))) * set.gamma
+                            new_rewards[j, trn_actions[j]] += np.max(self.Q.predict(np.expand_dims(trn_nxt_shot[j], axis = 0))) * set.gamma
                         else :
                             new_rewards[j] = self.Q_target.predict(np.expand_dims(trn_nxt_shot[j], axis = 0))
                             new_rewards[j, trn_actions[j]] = trn_rewards[j]
-                            new_rewards[j] += np.argmax(self.Q_target.predict(np.expand_dims(trn_nxt_shot[j], axis = 0))) * set.gamma 
+                            new_rewards[j, trn_actions[j]] += np.max(self.Q_target.predict(np.expand_dims(trn_nxt_shot[j], axis = 0))) * set.gamma 
                         # Q_new = r + Q_predict(a,s) * gamma
                     
                     #print("new_rewards\n", new_rewards[0])
