@@ -202,7 +202,7 @@ class Train() :
                 #print(cur_action, ",", cur_reward)
                 
                 # check if stuck
-                if set.stuck_countdown > 0 :
+                if set.check_stuck :
                     stuck_count += (1 if cur_reward == 0 else -1)
                     if stuck_count >= set.stuck_thrshld :
                         sys.stdout.write(" at step " +  str(n) + "\t")
