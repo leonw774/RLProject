@@ -46,8 +46,8 @@ class TrainingSetting() :
     move_much_thrshld = shot_h * shot_w * shot_c * (0.07 + 2 * noise_range) * ((shot_c - 1) * 0.01 + 1) # 0.09
     no_move_thrshld = shot_h * shot_w * shot_c * 0.03 * ((shot_c - 1) * 0.01 + 1)
     
-    stuck_countdown = 90
-    stuck_thrshld = 80
+    stuck_countdown = 100
+    stuck_thrshld = 90
     
     gamma = 0.36788
     total_r = len(mapname_list)
@@ -82,3 +82,14 @@ class TrainingSetting() :
     
     eps_test = 0.1
     steps_test = 50
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
