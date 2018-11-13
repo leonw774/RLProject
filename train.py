@@ -169,6 +169,7 @@ class Train() :
             
             this_epoch_eps = max(set.eps_min, set.epsilon * (set.eps_decay ** e), random.random())
             total_reward = 0
+            stuck_count = 0
             loss = 0
 
             for n in range(set.steps_epoch) :
@@ -196,15 +197,17 @@ class Train() :
                 self.do_control(cur_action)
                 
                 nxt_shot = self.get_screenshot(wait_no_move = True)
-                tmp_reward = stepQueue.calReward(cur_shot, nxt_shot) # pre-action, after-action
-                
-                #print(cur_action, ",", cur_reward)
-                if tmp_reward == "stuck" :
-                    sys.stdout.write(" at step " +  str(n) + "\t")
-                    sys.stdout.flush()
-                    break
-                cur_reward = tmp_reward
+                cur_reward = stepQueue.calReward(cur_shot, nxt_shot) # pre-action, after-action
                 # total_reward += cur_reward
+                #print(cur_action, ",", cur_reward)
+                
+                # check if stuck
+                if set.stuck_countdown > 0 :
+                    stuck_count += (1 if cur_reward == 0 else -1)
+                    if stuck_count >= set.stuck_thrshld :
+                        sys.stdout.write(" at step " +  str(n) + "\t")
+                        sys.stdout.flush()
+                        break
                 
                 if not set.ignore_zero_reward or cur_reward != 0 or random.random() < (set.ignore_zero_reward_p ** n) :
                     stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)

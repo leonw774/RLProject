@@ -98,18 +98,6 @@ class StepQueue() :
                 if this_mapnum > cur_map : cur_map = this_mapnum
         return cur_map
     
-    def isStuck(self, cur_scrshot) :
-        OH_NO_YOURE_STUCK = 0
-        STUCK_COUNTDOWN = set.stuck_countdown
-        
-        for this_map, this_scrshot in enumerate(reversed(self.scrshotList[-STUCK_COUNTDOWN:])) :
-            if np.sum(np.absolute(this_scrshot - cur_scrshot)) <= set.no_move_thrshld and STUCK_COUNTDOWN > 0 :
-                OH_NO_YOURE_STUCK += 1
-            else :
-                OH_NO_YOURE_STUCK -= 1
-
-        return OH_NO_YOURE_STUCK > set.stuck_thrshld
-    
     def calReward(self, pre_scrshot, cur_scrshot) :
         pre_scrshot = pre_scrshot[0] # before action
         cur_scrshot = cur_scrshot[0] # after action
@@ -122,9 +110,6 @@ class StepQueue() :
 
         min_cur_diff = 2147483648
         cur_map = -1
-        
-        if self.isStuck(cur_scrshot) == True :
-            return "stuck"
         
         #if np.sum(np.absolute(pre_scrshot - cur_scrshot)) < set.no_move_thrshld : return 0.0
         
