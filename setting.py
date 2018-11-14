@@ -43,7 +43,6 @@ class TrainingSetting() :
     
     # REWARD SETTING
     mapname_list = sorted(os.listdir("map/"), key = sorting_filename_as_int)
-    move_much_thrshld = shot_h * shot_w * shot_c * (0.07 + 2 * noise_range) * ((shot_c - 1) * 0.01 + 1) # 0.09
     no_move_thrshld = shot_h * shot_w * shot_c * 0.03 * ((shot_c - 1) * 0.01 + 1)
     
     check_stuck = True
@@ -55,7 +54,8 @@ class TrainingSetting() :
     # ACTION SETTIN
     mouse_straight_angles = 12
     mouse_round_angles = 6
-    actions_num = (mouse_straight_angles + mouse_round_angles * 2) * 2
+    actions_num = (mouse_straight_angles + mouse_round_angles) * 2
+    # ROUND ACTION ONLY HAS CLOCKWISE BECAUSE COUNTER-CLOCKWISE IS USELESS
     # {slow straight(12), fast straight(12), cwise round slow / fast(12), ccwise round slow / fast(12)}
     do_control_pause = 0.03
 

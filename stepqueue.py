@@ -126,7 +126,7 @@ class StepQueue() :
         
         #print(pre_map, "with", min_pre_diff, "to", cur_map, "with", min_cur_diff)
         
-        #if min_cur_diff >= set.move_much_thrshld * 2 :
+        #if min_cur_diff >= set.no_move_thrshld * 3 :
             # not in the map!?
         #    return 0.0
         

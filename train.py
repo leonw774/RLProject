@@ -54,7 +54,7 @@ class Train() :
             pre = cur
             cur = screenshot(region = self.GameRegion).convert('RGB').resize(set.shot_resize)
             if np.sum(np.array(cur)) <= 256 : # is black
-                sleep(1.0)
+                sleep(1.6)
                 continue
             if np.sum(np.absolute((np.array(pre) - np.array(cur)) / 256.0)) < 33 * set.no_move_thrshld :
                 break
@@ -84,9 +84,9 @@ class Train() :
         if id < set.mouse_straight_angles * 2 :
             # is straight
             slow_distance = 2400 # pixels
-            fast_distance = 4200 # pixels
+            fast_distance = 4000 # pixels
             slow_delta = 3 # pixels
-            fast_delta = 27
+            fast_delta = 25
         
             if id < set.mouse_straight_angles :
                 delta, distance = slow_delta, slow_distance
@@ -146,8 +146,14 @@ class Train() :
     def quitgame(self) :
         sleep(1)
         # push ESC
-        self.directInput.directKey("ESC")
-        sleep(1)
+        while(1) : # somrtimes the game is not responsive to keybroad, you have to try more times
+            shot1 = np.array(screenshot(region = self.GameRegion).convert('RGB').resize(set.shot_resize))
+            self.directInput.directKey("ESC")
+            sys.stdout.write(" ESC...")
+            sys.stdout.flush()
+            sleep(1)
+            shot2 = np.array(screenshot(region = self.GameRegion).convert('RGB').resize(set.shot_resize))
+            if np.sum(np.abs(shot1 - shot2)) < set.no_move_thrshld : break
         # click "QUIT"
         click(self.GameRegion[0] + self.GameRegion[2] * 0.15, self.GameRegion[1] + self.GameRegion[3] * 1.05)
         sleep(10)
@@ -185,10 +191,11 @@ class Train() :
                         cur_action = random.randrange(set.actions_num - 1)
                     else :
                         if set.use_p_normalizeation :
-                            weight = stepQueue.getActionsOccurrence()
-                            weight = weight.max() - weight
-                            weight = weight / weight.sum()
-                            cur_action = np.random.choice(np.arange(set.actions_num), p = weight)
+                            w = stepQueue.getActionsOccurrence()
+                            w = w.max() - w
+                            w = np.exp(w)
+                            w /= w.sum()
+                            cur_action = np.random.choice(np.arange(set.actions_num), p = w)
                         else :
                             cur_action = np.random.choice(np.arange(set.actions_num))
                 else :
@@ -203,9 +210,13 @@ class Train() :
                 
                 # check if stuck
                 if set.check_stuck :
-                    stuck_count += (1 if cur_reward == 0 else -1)
-                    if stuck_count >= set.stuck_thrshld :
-                        sys.stdout.write(" at step " +  str(n) + "\t")
+                    if cur_reward == 0 :
+                        stuck_count += 1 
+                    elif stuck_count > 0 :
+                        stuck_count -= 1
+                    if stuck_count > set.stuck_thrshld :
+                        loss *= (set.steps_epoch / float(n))
+                        sys.stdout.write("at step " +  str(n) + "\t")
                         sys.stdout.flush()
                         break
                 
@@ -215,24 +226,22 @@ class Train() :
                 if (stepQueue.getLength() > set.train_thrshld) and n % set.steps_train == 0 :
                     # Experience Replay
                     random_step = random.randint(1, stepQueue.getLength() - set.train_size)
-                    trn_cur_shot, trn_actions, trn_rewards, trn_nxt_shot = stepQueue.getStepsAsArray(random_step, set.train_size)
+                    trn_cur_s, trn_a, trn_r, trn_nxt_s = stepQueue.getStepsAsArray(random_step, set.train_size)
                     
                     # make next predicted reward array and train input array at same time
-                    new_rewards = np.zeros((set.train_size, set.actions_num))
+                    new_r = np.zeros((set.train_size, set.actions_num))
                     for j in range(set.train_size) :
                         if set.steps_update_target > 0 :
-                            new_rewards[j] = self.Q.predict(np.expand_dims(trn_cur_shot[j], axis = 0))
-                            new_rewards[j, trn_actions[j]] = trn_rewards[j]
-                            new_rewards[j, trn_actions[j]] += np.max(self.Q.predict(np.expand_dims(trn_nxt_shot[j], axis = 0))) * set.gamma
+                            new_r[j] = self.Q.predict(np.expand_dims(trn_cur_s[j], axis = 0))
+                            new_r[j, trn_a[j]] = trn_r[j] + np.max(self.Q.predict(np.expand_dims(trn_nxt_s[j], axis = 0))) * set.gamma
                         else :
-                            new_rewards[j] = self.Q_target.predict(np.expand_dims(trn_nxt_shot[j], axis = 0))
-                            new_rewards[j, trn_actions[j]] = trn_rewards[j]
-                            new_rewards[j, trn_actions[j]] += np.max(self.Q_target.predict(np.expand_dims(trn_nxt_shot[j], axis = 0))) * set.gamma 
+                            new_r[j] = self.Q_target.predict(np.expand_dims(trn_nxt_s[j], axis = 0))
+                            new_r[j, trn_a[j]] = trn_r[j] + np.max(self.Q_target.predict(np.expand_dims(trn_nxt_s[j], axis = 0))) * set.gamma 
                         # Q_new = r + Q_predict(a,s) * gamma
                     
-                    #print("new_rewards\n", new_rewards[0])
+                    #print("new_r\n", new_r[0])
                     
-                    loss += self.Q.train_on_batch(trn_cur_shot, new_rewards)[0] / set.steps_epoch
+                    loss += self.Q.train_on_batch(trn_cur_s, new_r)[0] / set.steps_epoch
                     
                 if set.steps_update_target > 0 and n % set.steps_update_target == 0 and n > set.train_thrshld :
                     #print("assign Qtarget")
@@ -278,6 +287,7 @@ class Train() :
                     else :
                         w = predict_Q
                         w[w < 0] = 0.0
+                        w = np.exp(w)
                         w /= w.sum()
                         cur_action = np.random.choice(np.arange(set.actions_num), p = w)
                     
