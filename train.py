@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import random
 import math
 import numpy as np
@@ -6,24 +6,25 @@ from PIL import Image
 from time import sleep
 from datetime import datetime, timedelta
 from pyautogui import click, screenshot
-from keras.models import Model, load_model, optimizers
-
+from win32 import win32gui
+from keras.models import Model, load_model
+import pyautogui
 from setting import TrainingSetting as set
 from stepqueue import StepQueue
 from directinputs import Keys
 from QNet import QNet
 
+
 class Train() :
     
     def __init__(self, use_weight_file = None) :
         
-        self.GameRegion = set.get_game_region("Getting Over It")
-        self.directInput = Keys()
-        self.model_optimizer = optimizers.sgd(lr = 0.01) # decay = 1e-6)
+        self.GameRegion = self.get_game_region("Getting Over It")
         
+        self.directInput = Keys()
         self.Q = QNet(set.model_input_shape, set.actions_num)
         self.Q.summary()
-        self.Q.compile(loss = "mse", optimizer = self.model_optimizer, metrics = ['mse'])
+        self.Q.compile(loss = "mse", optimizer = set.model_optimizer)
         
         if use_weight_file :
             self.Q.load_weights(use_weight_file)
@@ -38,36 +39,33 @@ class Train() :
             action_onehot[0, i] = 1
             self.A.append(action_onehot)
     
+    def get_game_region(self, title) :
+        screen_w, screen_h = pyautogui.size()
+        return (715, 85 , 170 ,85)
+    # end get_game_region
+    
     def count_down(self, cd) :
         for i in range(cd) :
             print(cd - i)
             sleep(1.0)
             
-    def get_screenshot(self, wait_no_move = True, savefile = None) :
-        # return screen-shot of game in np array in shape of set.shot_shape
+    def get_screenshot(self, num = 1, savefile = None) :
+        sleep(set.shot_intv_time)
         array_scrshot = np.zeros(set.shot_shape)
-        cur = screenshot(region = self.GameRegion).convert('RGB').resize(set.shot_resize)
-        i = 0
-        while(wait_no_move and i <= set.shot_wait_max) :
-            #print("waiting for no moving")
-            sleep(set.shot_intv_time)
-            pre = cur
-            cur = screenshot(region = self.GameRegion).convert('RGB').resize(set.shot_resize)
-            if np.sum(np.array(cur)) <= 256 : # is black
-                sleep(1.6)
-                continue
-            if np.sum(np.absolute((np.array(pre) - np.array(cur)) / 256.0)) < 33 * set.no_move_thrshld :
-                break
-            i += 1
-        
-        if set.shot_c == 1 :
-            array_scrshot = np.reshape(np.array(cur.convert('L')) / 255.5, set.shot_shape)
-        elif set.shot_c == 3 :
-            array_scrshot[0] = np.array(cur) / 255.5
-        else :
-            raise Exception("shot_c isn't right.")
-        if savefile : scrshot.save(savefile)
-        return array_scrshot
+        while(True) :
+            if set.color_size == 1 :
+                scrshot = (screenshot(region = self.GameRegion)).convert('L').resize(set.shot_resize, resample = Image.NEAREST)
+                array_scrshot = np.reshape(np.array(scrshot) / 255.5, set.shot_shape)
+            elif set.color_size == 3 :
+                scrshot = (screenshot(region = self.GameRegion)).convert('RGB').resize(set.shot_resize, resample = Image.NEAREST)
+                array_scrshot[0] = np.array(scrshot) / 255.5
+            else :
+                raise Exception("color_size isn't right.")
+            if savefile : scrshot.save(savefile)
+            if np.sum(array_scrshot) < 0.001 :
+                sleep(2.0)
+            else :
+                return array_scrshot
     # end def get_screenshot
     
     def add_noise(self, noisy_scrshot) :
@@ -77,87 +75,88 @@ class Train() :
         return noisy_scrshot
     # end def get_screen_rect
     
-    def do_control(self, id) :
+    def do_control(self, id) : 
+        '''
+        相對方向的滑動
+        [slow moving x angle_num, fast moving x angle_num]
+        '''
+        slow_distance = 2500 # pixels
+        fast_distance = 4000 # pixels
+        slow_intv_distance = 5 # pixels
+        fast_intv_distance = 30
+        intv_time = 0.0025
         
-        intv_time = 0.001
+        if id == 1:
+            pyautogui.keyDown('w')
+            sleep(0.1)
+        elif id == 2:
+            pyautogui.keyDown('q')
+        elif id == 3:
+            pyautogui.keyDown('o')
+        elif id == 4:
+            pyautogui.keyDown('p')
+        elif id == 5:
+            pyautogui.keyDown('q')
+            pyautogui.keyDown('p')
+        elif id == 6:
+            pyautogui.keyDown('w')
+            pyautogui.keyDown('o')
+            sleep(0.1)
         
-        if id < set.mouse_straight_angles * 2 :
-            # is straight
-            slow_distance = 2400 # pixels
-            fast_distance = 4000 # pixels
-            slow_delta = 3 # pixels
-            fast_delta = 25
+
+        if id == 1:
+            pyautogui.keyUp('w')
+        elif id == 2:
+            pyautogui.keyUp('q')
+        elif id == 3:
+            pyautogui.keyUp('o')   
+        elif id == 4:
+            pyautogui.keyUp('p')
+        elif id == 5:
+            pyautogui.keyUp('q')
+            pyautogui.keyUp('p')
+        elif id == 6:
+            pyautogui.keyUp('o')   
+            pyautogui.keyUp('w')
+
+        pyautogui.keyDown('w')
+        sleep(0.1)
+        pyautogui.keyUp('w')
+       
         
-            if id < set.mouse_straight_angles :
-                delta, distance = slow_delta, slow_distance
-            else :
-                delta, distance = fast_delta, fast_distance
-            
-            angle = 2 * math.pi * id / set.mouse_straight_angles
-            d_x = math.ceil(math.cos(angle) * delta)
-            d_y = math.ceil(math.sin(angle) * delta)
-            
-            for i in range(distance // delta) :
-                self.directInput.directMouse(d_x, d_y)
-                sleep(intv_time)
-            if id >= set.mouse_straight_angles :
-                sleep(0.02)
-        else :
-            # is round
-            id -= set.mouse_straight_angles * 2
-            
-            if id < set.mouse_round_angles * 2 :
-                is_clockwise = 1
-            else :
-                is_clockwise = -1
-                id -= set.mouse_round_angles * 2
-            
-            if id < set.mouse_round_angles : # slow
-                radius = 560
-                delta = 4
-                proportion = 0.8
-            else : # fast
-                radius = 720
-                delta = 18
-                proportion = 0.66
-            
-            angles_divide = 36.0
-            angle_bias = 4.0
-            angle_offset = id / set.mouse_round_angles + angle_bias / angles_divide
-            edge_leng = int(2 * (radius**2) * (1 - math.cos(1.0 / angles_divide))) 
-            
-            for i in range(int(angles_divide * proportion)) : 
-                angle = 2 * math.pi * (i * is_clockwise / angles_divide + angle_offset)
-                d_x = math.ceil(math.cos(angle) * delta)
-                d_y = math.ceil(math.sin(angle) * delta)
-                for j in range(edge_leng // delta) :
-                    self.directInput.directMouse(d_x, d_y)
-                    sleep(intv_time)
-            sleep(0.01)
         sleep(set.do_control_pause)
     # end def do_control()
     
-    def newgame(self) :
-        sleep(1)
+    def click_newgame(self) :
+        sleep(0.5)
         # click "NEW GAME"
-        click(self.GameRegion[0] + self.GameRegion[2] * 0.70, self.GameRegion[1] + self.GameRegion[3] * 0.40)
-        sleep(8)
-    
-    def quitgame(self) :
+        click(self.GameRegion[0] + 50, self.GameRegion[1] + 700)
         sleep(1)
-        # push ESC
-        while(1) : # somrtimes the game is not responsive to keybroad, you have to try more times
-            shot1 = np.array(screenshot(region = self.GameRegion).convert('RGB').resize(set.shot_resize))
-            self.directInput.directKey("ESC")
-            sys.stdout.write(" ESC...")
-            sys.stdout.flush()
-            sleep(1)
-            shot2 = np.array(screenshot(region = self.GameRegion).convert('RGB').resize(set.shot_resize))
-            if np.sum(np.abs(shot1 - shot2)) < set.no_move_thrshld : break
-        # click "QUIT"
-        click(self.GameRegion[0] + self.GameRegion[2] * 0.15, self.GameRegion[1] + self.GameRegion[3] * 1.05)
-        sleep(10)
     
+    def click_quitgame(self) :
+        sleep(0.5)
+        pyautogui.keyDown('r')
+        pyautogui.keyUp('r')
+        # push ESC
+        #self.directInput.directKey("ESC")
+        #sleep(0.5)
+        # click "QUIT"
+        #click(self.GameRegion[0] + self.GameRegion[2] * 0.21, self.GameRegion[1] + self.GameRegion[3] * 0.95)
+        sleep(1)
+    def isdead(self):
+        isdead_region = 490, 320 , 910 , 120
+        curshot = pyautogui.screenshot(region = isdead_region)
+        file_path = r"C:\Users\lin2\Documents\GitHub\QWOPProject_now\QWOP\dead.png"
+        dead_frame = Image.open(file_path)
+        dead_shot = np.array(dead_frame).reshape(120 , 910, 3)
+        result_arrray = curshot- dead_shot
+        result = np.sum(result_arrray)
+        if abs(result) < 0.1:
+            #print("True")
+            return True
+        else:
+            #print("False")
+            return False
     def fit(self) :
         '''
         We will train Q, at time t, as:
@@ -167,172 +166,180 @@ class Train() :
         after a number of steps, copy Q to Q_target.
         '''
         
-        stepQueue = StepQueue()
-        
         for e in range(set.epoches) :
             
-            self.newgame()
+            self.click_newgame()
             
-            this_epoch_eps = max(set.eps_min, set.epsilon * (set.eps_decay ** e), random.random())
+            stepQueue = StepQueue()
             total_reward = 0
-            stuck_count = 0
-            loss = 0
+            no_reward_count = 0
+            count = 1
+            this_epoch_epsilon = set.epsilon * (set.eps_decay ** e)
+            input_shots = np.zeros((1, set.shot_h, set.shot_w, set.color_size * set.shot_n))
 
             for n in range(set.steps_epoch) :
                 if (n + 1) % (set.steps_epoch / 10) == 0 :
                     sys.stdout.write(".")
                     sys.stdout.flush()
+
                 
-                cur_shot = self.get_screenshot(wait_no_move = False)
+                cur_shot = self.get_screenshot()
+                input_shots[:,:,:, : -set.color_size] = input_shots[:,:,:, set.color_size : ] # dequeue
+                input_shots[:,:,:, -set.color_size : ] = cur_shot # enqueue
 
                 # make action
-                if random.random() < this_epoch_eps :
-                    if n <= 1 :
-                        cur_action = random.randrange(set.actions_num - 1)
+                if n <= set.shot_n or random.random() < max(set.eps_min, this_epoch_epsilon) :
+                    if n == 0 :
+                        cur_action = random.randint(0, set.actions_num - 1)
                     else :
-                        if set.use_p_normalizeation :
-                            w = stepQueue.getActionsOccurrence()
-                            w = w.max() - w
-                            w = np.exp(w)
-                            w /= w.sum()
-                            cur_action = np.random.choice(np.arange(set.actions_num), p = w)
-                        else :
-                            cur_action = np.random.choice(np.arange(set.actions_num))
+                        p_weight = n - stepQueue.getActionsOccurrence()
+                        p_weight = p_weight / p_weight.sum()
+                        cur_action = np.random.choice(np.arange(set.actions_num), p = p_weight)
                 else :
-                    cur_action = np.argmax(self.Q.predict(self.add_noise(cur_shot)))
+                    cur_action = np.argmax(self.Q.predict(self.add_noise(input_shots)))
                 
                 self.do_control(cur_action)
+                #dead ,don't need to count next
+                if self.isdead():
+                    break;
+
+                nxt_shot = self.get_screenshot()
+                count,cur_reward = stepQueue.calReward(cur_shot, nxt_shot,count) # pre-action, after-action
+                print(n," round: ",count/10," m")
+                if cur_reward == "stuck" :
+                    sys.stdout.write(" at step " +  str(n) + ", ")
+                    sys.stdout.flush()
+                    screenshot(region = self.GameRegion).save("stuck_at_epoch" + str(e) + ".png")
+                    break
                 
-                nxt_shot = self.get_screenshot(wait_no_move = True)
-                cur_reward = stepQueue.calReward(cur_shot, nxt_shot) # pre-action, after-action
-                # total_reward += cur_reward
-                #print(cur_action, ",", cur_reward)
+                total_reward += cur_reward
+                if cur_reward <= set.bad_r :
+                    no_reward_count += 1
+                if no_reward_count > set.no_reward_countdown :
+                    continue;
+                    #break;
                 
-                # check if stuck
-                if set.check_stuck :
-                    if cur_reward == 0 :
-                        stuck_count += 1 
-                    elif stuck_count > 0 :
-                        stuck_count -= 1
-                    if stuck_count > set.stuck_thrshld :
-                        loss *= (set.steps_epoch / float(n))
-                        sys.stdout.write("at step " +  str(n) + "\t")
-                        sys.stdout.flush()
-                        break
+                stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
                 
-                if not set.ignore_zero_reward or cur_reward != 0 or random.random() < (set.ignore_zero_reward_p ** n) :
-                    stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
-                
-                if (stepQueue.getLength() > set.train_thrshld) and n % set.steps_train == 0 :
+                if stepQueue.getLength() > set.train_size and n > set.train_thrshld and n % set.steps_train == 0 :
                     # Experience Replay
-                    random_step = random.randint(1, stepQueue.getLength() - set.train_size)
-                    trn_cur_s, trn_a, trn_r, trn_nxt_s = stepQueue.getStepsAsArray(random_step, set.train_size)
+                    random_step = random.randint(set.shot_n + 1, stepQueue.getLength() - set.train_size - 1)
+                    train_cur_shots, train_actions, train_rewards, train_nxt_shots = stepQueue.getStepsAsArray(random_step, set.train_size)
+                    train_input_shots = np.zeros((set.train_size, set.shot_h, set.shot_w, set.color_size * set.shot_n))
+                    
+                    # make replay reward array
+                    replay_rewards = np.zeros((set.train_size, set.actions_num))
+                    for j in range(set.train_size) :
+                        replay_rewards[j, int(train_actions[j])] = train_rewards[j]
                     
                     # make next predicted reward array and train input array at same time
-                    new_r = np.zeros((set.train_size, set.actions_num))
+                    nxt_rewards = np.zeros((set.train_size, set.actions_num))
                     for j in range(set.train_size) :
-                        if set.steps_update_target > 0 :
-                            new_r[j] = self.Q.predict(np.expand_dims(trn_cur_s[j], axis = 0))
-                            new_r[j, trn_a[j]] = trn_r[j] + np.max(self.Q.predict(np.expand_dims(trn_nxt_s[j], axis = 0))) * set.gamma
+                        if j < set.shot_n - 1 :
+                            train_input_shots[j,:,:, : -set.color_size] = stepQueue.getShotsAsArray(random_step - set.shot_n, set.shot_n - 1)
                         else :
-                            new_r[j] = self.Q_target.predict(np.expand_dims(trn_nxt_s[j], axis = 0))
-                            new_r[j, trn_a[j]] = trn_r[j] + np.max(self.Q_target.predict(np.expand_dims(trn_nxt_s[j], axis = 0))) * set.gamma 
-                        # Q_new = r + Q_predict(a,s) * gamma
+                            train_input_shots[j,:,:, : -set.color_size] = train_input_shots[j - 1,:,:, set.color_size : ]
+                        train_input_shots[j,:,:, -set.color_size : ] = train_cur_shots[j]
+                        train_input_shots[j] = self.add_noise(train_input_shots[j])
+                        this_train_input_shots = train_input_shots[j].reshape((1, set.shot_h, set.shot_w, set.shot_n*set.color_size))
+                        if set.steps_update_target > 0 :
+                            nxt_rewards[j] = self.Q.predict(this_train_input_shots)
+                        else :
+                            nxt_rewards[j] = self.Q_target.predict(this_train_input_shots)
+                        nxt_rewards[j, int(train_actions[j])] *= set.gamma
+                        
+                    train_targets_rewards = replay_rewards + nxt_rewards
                     
-                    #print("new_r\n", new_r[0])
+                    #print("replay_rewards\n", replay_rewards[0])
+                    #print("nxt_rewards\n", nxt_rewards[0])
+                    #print("train_targets\n", train_targets[0])
                     
-                    loss += self.Q.train_on_batch(trn_cur_s, new_r)[0] / set.steps_epoch
+                    loss = self.Q.train_on_batch(train_input_shots, train_targets_rewards)
+                    #print("loss: ", loss)
                     
                 if set.steps_update_target > 0 and n % set.steps_update_target == 0 and n > set.train_thrshld :
                     #print("assign Qtarget")
                     self.Q_target.set_weights(self.Q.get_weights())
-                    self.Q_target.save("Q_target_model.h5")
+                    self.Q_target.save("Q_target_model2.h5")
+                
                     
-            # end for(STEP_PER_EPOCH)
-            print("end epoch %d\tat map %d\tloss: %.4f" % (e, stepQueue.getCurMap(cur_shot), loss))
-            #stepQueue.clear()
-            self.Q_target.save("Q_target_model.h5")
+                # end for(STEP_PER_EPOCH)  
+            print("end epoch", e, "total_reward:", total_reward)
+            stepQueue.clear()
+            
             # Restart Game...
-            self.quitgame()
+            self.click_quitgame()
             
         # end for(epoches)
-        
-        self.Q_target.save("Q_target_model.h5")
+       
+        self.Q_target.save("Q_target_model2.h5")
         
     # end def fit
     
-    def test(self, model_weight_name, rounds = 1) :
-        print("test begin for:", model_weight_name)
+    def eval(self, model_weight_name) :
+        count = 1
+        print("eval begin for:", model_weight_name)
         self.Q = load_model(model_weight_name)
-        end_map_list = []
         
-        for i in range(rounds) :
+        # click "NEW GAME"
+        self.click_newgame()
         
-            # click "NEW GAME"
-            self.newgame()
-            stepQueue = StepQueue()
-            cur_shot = self.get_screenshot() 
+        stepQueue = StepQueue()
+        total_reward = 0
+        input_shots = np.zeros((1, set.shot_h, set.shot_w, set.color_size * set.shot_n))
+        for n in range(set.steps_test) :
+            cur_shot = self.get_screenshot()
+            input_shots[:,:,:, : -set.color_size] = input_shots[:,:,:, set.color_size: ] # dequeue
+            input_shots[:,:,:, -set.color_size : ] = cur_shot # enqueue
             
-            for n in range(set.steps_test) :
-                cur_shot = self.get_screenshot()
+            if n <= set.shot_n or random.random() < set.eps_test :
+                cur_action = random.randrange(set.actions_num)
+            else :
+                predict_Q = self.Q.predict(self.add_noise(input_shots))
+                #print(predict_Q)
+                cur_action = np.argmax(predict_Q)
                 
-                if random.random() <= set.eps_test :
-                    cur_action = random.randrange(set.actions_num)
-                    print("choose", cur_action, "as random")
-                else :
-                    predict_Q = np.squeeze(self.Q.predict(self.add_noise(cur_shot)))
-                    
-                    if predict_Q.sum() == 0 :
-                        cur_action = random.randrange(set.actions_num)
-                    else :
-                        w = predict_Q
-                        w[w < 0] = 0.0
-                        w = np.exp(w)
-                        w /= w.sum()
-                        cur_action = np.random.choice(np.arange(set.actions_num), p = w)
-                    
-                    #cur_action = np.argmax(predict_Q)
-                    #print(predict_Q)
-                    print("choose", cur_action, "with higher Q:", predict_Q[cur_action])
-                    
-                self.do_control(cur_action)
-                nxt_shot = self.get_screenshot()
-            
-            end_map = stepQueue.getCurMap(cur_shot)
-            end_map_list.append(end_map)
-            
-            print("test end\tat map: ", end_map)
-            #screenshot(region = self.GameRegion).save("test_scrshot.png")
+            self.do_control(cur_action)
+            nxt_shot = self.get_screenshot()
+            count,cur_reward = stepQueue.calReward(cur_shot, nxt_shot,count) # pre, cur
+            if cur_reward == "stuck" : break
+            stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
+            total_reward += cur_reward
         
-            # Exit Game...
-            self.quitgame()
+        del stepQueue
+        print("eval end, total_reward:", total_reward)
+        screenshot(region = self.GameRegion).save("eval_scrshot.png")
         
-        print(end_map_list)
+        # Exit Game...
+        self.click_quitgame()
 
-    # end def test
+    # end def eval
     
     def random_action(self, steps = None) :
         # click "NEW GAME"
-        self.newgame()
+        count = 1
+        self.click_newgame()
         stepQueue = StepQueue()
+        total_reward = 0
         if steps == None : steps = set.steps_test
         for n in range(steps) :
             cur_shot = self.get_screenshot()
             cur_action = random.randrange(set.actions_num)
             self.do_control(cur_action)
             nxt_shot = self.get_screenshot()
-            cur_reward = stepQueue.calReward(cur_shot, nxt_shot)
+            count,cur_reward = stepQueue.calReward(cur_shot, nxt_shot,count)
             print(cur_action, ",", cur_reward)
             if cur_reward == "stuck" :
                 print("at step", n)
                 screenshot(region = self.GameRegion).save("stuck_at_random.png")
                 break
             stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
+            total_reward += cur_reward
         
         del stepQueue
-        print("test end, of reward: %.2f", cur_reward)
+        print("eval end, totalReward:", total_reward)
         # Exit Game...
-        self.quitgame()
+        self.click_quitgame()
     # end def
     
 # end class Train
@@ -341,9 +348,9 @@ if __name__ == '__main__' :
     train = Train()
     train.count_down(3)
     starttime = datetime.now()
-    #train.random_action()
-    train.fit()
+    #train.fit()
     print(datetime.now() - starttime)
-    train.test("Q_target_model.h5", 20)
+    #train.random_action()
+    train.eval("Q_target_model2.h5")
     
 

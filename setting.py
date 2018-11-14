@@ -1,95 +1,62 @@
-import os
 import numpy as np
-from win32 import win32gui
-
-def sorting_filename_as_int(element) :
-    return int(element[0 :- 4])
+from keras import optimizers
 
 class TrainingSetting() :
     
     # SCREENSHOTS SETTING
-    shot_w = 108
+    shot_n = 2
+    shot_w = 128
     shot_h = 72
-    shot_c = 3
-    shot_shape = (1, shot_h, shot_w, shot_c)
+    color_size = 1
+    shot_shape = (1, shot_h, shot_w, color_size)
     shot_resize = (shot_w, shot_h)
     shot_intv_time = 0.01
-    shot_wait_max = 100
-    noise_range = 0.01
-    
-    def get_game_region(title = None) :
-        if title :
-            gamewin = win32gui.FindWindow(None, title)
-            if not gamewin:
-                raise Exception('window title not found')
-            #get the bounding box of the window
-            x1, y1, x2, y2 = win32gui.GetWindowRect(gamewin)
-            
-            h_padding = (y2 - y1) * 0.1
-            w_padding = (x2 - x1) * 0.1
-            
-            y1 += h_padding # get rid of window bar
-            y2 -= h_padding
-            x1 += w_padding
-            x2 -= w_padding
-            
-            return (x1, y1, (x2 - x1 + 1), (y2 - y1 + 1))
-        else :
-            raise Exception("no window title was given.")
-    # end get_game_region
+    noise_range = 0.03
 
     # Q NET SETTING
-    model_input_shape = (shot_h, shot_w, shot_c)    
-    
+    model_input_shape = (shot_h, shot_w, color_size * shot_n)
+    model_optimizer = optimizers.sgd(lr = 0.1)
+
     # REWARD SETTING
-    mapname_list = sorted(os.listdir("map/"), key = sorting_filename_as_int)
-    no_move_thrshld = shot_h * shot_w * shot_c * 0.03 * ((shot_c - 1) * 0.01 + 1)
+    gamma = 0.36787944117 # 1 / exp(1)
+    good_thrshld = shot_h * shot_w * color_size * (0.03 + 2 * noise_range) # 0.09
+    no_move_thrshld = shot_h * shot_w * color_size * 0.03
     
-    check_stuck = True
+    stuck_countdown = 0
     stuck_thrshld = 60
     
-    gamma = 0.5
-    total_r = len(mapname_list)
+    use_compare_block = False
+    block_side_num = 4
+    block_num = block_side_num**2
+    compare_stride = max(shot_h // block_side_num, shot_w // block_side_num)
+    compare_block_size = (block_num, shot_h // block_side_num, shot_w // block_side_num, color_size)
+    
+    good_r = 1.0
+    bad_r = 0.0
+    been_here_decline_rate = 0.8 # 0.0 ~ 1.0, per step
 
-    # ACTION SETTIN
-    mouse_straight_angles = 12
-    mouse_round_angles = 6
-    actions_num = (mouse_straight_angles + mouse_round_angles) * 2
-    # ROUND ACTION ONLY HAS CLOCKWISE BECAUSE COUNTER-CLOCKWISE IS USELESS
-    # {slow straight(12), fast straight(12), cwise round slow / fast(12), ccwise round slow / fast(12)}
-    do_control_pause = 0.03
+    # ACTION SETTING
+    mouse_angle_devision = 16
+    actions_num = 6
+    # {slow moving, fast moving}
+    do_control_pause = 0.1
 
     # STEP QUEUE SETTING
-    stepQueue_length_max = 4000 # set 0 to be no limit
+    stepQueue_length_max = 1000 # set 0 to be no limit
 
     # TRAINING SETTING
     epsilon = 1.0
-    eps_min = 0.25
-    eps_decay = 0.995
-    
-    use_p_normalizeation = False
-    ignore_zero_reward = True
-    ignore_zero_reward_p = 0.99
-    
-    epoches = 200
-    steps_epoch = 250
-    train_thrshld = 81
+    eps_min = 0.2
+    eps_decay = 0.99
+    epoches = 40
+    steps_epoch = 750
+    train_thrshld = 201
     steps_train = 4
-    train_size = 64
-    steps_update_target = 80 # set to 0 to disable
+    train_size = 32
+    steps_update_target = 200 # set to 0 to disable
     
-    no_reward_break = False
+    no_reward_countdown = train_thrshld + steps_update_target
     
-    eps_test = 0.1
-    steps_test = 50
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+    eps_test = 0.01
+    steps_test = 750
     
