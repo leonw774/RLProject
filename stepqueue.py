@@ -26,7 +26,7 @@ class StepQueue() :
         self.incline_rate = (1 / set.gamma) ** (1 / len(self.mapList))
         # so that the reward of last map, after times gamma, is exactly equal to total_r
         
-        print("no_move, move:", set.no_move_thrshld, set.move_much_thrshld)
+        print("no_move: ", set.no_move_thrshld)
         print("map_score:", self.map_score)
         print("incline_rate:", self.incline_rate)
     

@@ -45,9 +45,6 @@ class TrainingSetting() :
     mapname_list = sorted(os.listdir("map/"), key = sorting_filename_as_int)
     no_move_thrshld = shot_h * shot_w * shot_c * 0.03 * ((shot_c - 1) * 0.01 + 1)
     
-    check_stuck = True
-    stuck_thrshld = 60
-    
     gamma = 0.5
     total_r = len(mapname_list)
 
@@ -65,14 +62,17 @@ class TrainingSetting() :
     # TRAINING SETTING
     epsilon = 1.0
     eps_min = 0.25
-    eps_decay = 0.995
+    eps_decay = 0.995 
+        
+    check_stuck = True
+    stuck_thrshld = 60
     
     use_p_normalizeation = False
     ignore_zero_reward = True
     ignore_zero_reward_p = 0.99
     
     epoches = 200
-    steps_epoch = 250
+    steps_epoch = 300
     train_thrshld = 81
     steps_train = 4
     train_size = 64
