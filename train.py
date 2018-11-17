@@ -2,6 +2,7 @@ import sys
 import random
 import math
 import numpy as np
+from matplotlib import pyplot as plt
 from PIL import Image
 from time import sleep
 from datetime import datetime, timedelta
@@ -19,7 +20,7 @@ class Train() :
         
         self.GameRegion = set.get_game_region("Getting Over It")
         self.directInput = Keys()
-        self.model_optimizer = optimizers.sgd(lr = 0.01) # decay = 1e-6)
+        self.model_optimizer = optimizers.sgd(lr = set.learning_rate, momentum = 0.5, decay = 1e-6)
         
         self.Q = QNet(set.model_input_shape, set.actions_num)
         self.Q.summary()
@@ -149,11 +150,9 @@ class Train() :
         while(1) : # somrtimes the game is not responsive to keybroad, you have to try more times
             shot1 = np.array(screenshot(region = self.GameRegion).convert('RGB').resize(set.shot_resize))
             self.directInput.directKey("ESC")
-            sys.stdout.write(" ESC...")
-            sys.stdout.flush()
             sleep(1)
             shot2 = np.array(screenshot(region = self.GameRegion).convert('RGB').resize(set.shot_resize))
-            if np.sum(np.abs(shot1 - shot2)) < set.no_move_thrshld : break
+            if np.sum(np.abs(shot1 - shot2)) > set.no_move_thrshld : break
         # click "QUIT"
         click(self.GameRegion[0] + self.GameRegion[2] * 0.15, self.GameRegion[1] + self.GameRegion[3] * 1.05)
         sleep(10)
@@ -168,13 +167,16 @@ class Train() :
         '''
         
         stepQueue = StepQueue()
+        loss_list = []
+        end_reward_list = []
+        averange_reward_list = []
         
         for e in range(set.epoches) :
             
             self.newgame()
             
             this_epoch_eps = max(set.eps_min, set.epsilon * (set.eps_decay ** e), random.random())
-            total_reward = 0
+            avrg_reward = 0
             stuck_count = 0
             loss = 0
 
@@ -193,7 +195,6 @@ class Train() :
                         if set.use_p_normalizeation :
                             w = stepQueue.getActionsOccurrence()
                             w = w.max() - w
-                            w = np.exp(w)
                             w /= w.sum()
                             cur_action = np.random.choice(np.arange(set.actions_num), p = w)
                         else :
@@ -205,7 +206,7 @@ class Train() :
                 
                 nxt_shot = self.get_screenshot(wait_no_move = True)
                 cur_reward = stepQueue.calReward(cur_shot, nxt_shot) # pre-action, after-action
-                # total_reward += cur_reward
+                avrg_reward += cur_reward / set.steps_epoch
                 #print(cur_action, ",", cur_reward)
                 
                 # check if stuck
@@ -215,8 +216,9 @@ class Train() :
                     elif stuck_count > 0 :
                         stuck_count -= 1
                     if stuck_count > set.stuck_thrshld :
-                        loss *= (set.steps_epoch / float(n))
-                        sys.stdout.write("at step " +  str(n) + "\t")
+                        loss *= (float(set.steps_epoch) / float(n))
+                        avrg_reward *= (float(set.steps_epoch) / float(n))
+                        sys.stdout.write("\tat step " +  str(n) + " ")
                         sys.stdout.flush()
                         break
                 
@@ -233,15 +235,16 @@ class Train() :
                     for j in range(set.train_size) :
                         if set.steps_update_target > 0 :
                             new_r[j] = self.Q.predict(np.expand_dims(trn_cur_s[j], axis = 0))
-                            new_r[j, trn_a[j]] = trn_r[j] + np.max(self.Q.predict(np.expand_dims(trn_nxt_s[j], axis = 0))) * set.gamma
+                            predict_Q = self.Q.predict(np.expand_dims(trn_nxt_s[j], axis = 0))
                         else :
-                            new_r[j] = self.Q_target.predict(np.expand_dims(trn_nxt_s[j], axis = 0))
-                            new_r[j, trn_a[j]] = trn_r[j] + np.max(self.Q_target.predict(np.expand_dims(trn_nxt_s[j], axis = 0))) * set.gamma 
+                            new_r[j] = self.Q_target.predict(np.expand_dims(trn_cur_s[j], axis = 0))
+                            predict_Q = self.Q_target.predict(np.expand_dims(trn_nxt_s[j], axis = 0))
+                        new_r[j, trn_a[j]] = trn_r[j] + np.max(predict_Q) * set.gamma
                         # Q_new = r + Q_predict(a,s) * gamma
                     
                     #print("new_r\n", new_r[0])
                     
-                    loss += self.Q.train_on_batch(trn_cur_s, new_r)[0] / set.steps_epoch
+                    loss += self.Q.train_on_batch(trn_cur_s, new_r)[0] / float(set.steps_epoch)
                     
                 if set.steps_update_target > 0 and n % set.steps_update_target == 0 and n > set.train_thrshld :
                     #print("assign Qtarget")
@@ -249,13 +252,31 @@ class Train() :
                     self.Q_target.save("Q_target_model.h5")
                     
             # end for(STEP_PER_EPOCH)
-            print("end epoch %d\tat map %d\tloss: %.4f" % (e, stepQueue.getCurMap(cur_shot), loss))
+            end_reward = stepQueue.getCurMap(cur_shot)
+            print("epoch: %d\tat map %d\tloss: %.4f" % (e, end_reward, loss))
+            loss_list.append(loss)
+            end_reward_list.append(end_reward)
+            averange_reward_list.append(avrg_reward)
+            
             #stepQueue.clear()
             self.Q_target.save("Q_target_model.h5")
             # Restart Game...
             self.quitgame()
             
         # end for(epoches)
+        
+        plt.figure(figsize = (10, 6))
+        plt.xlabel("epoch")
+        plt.plot(loss_list, label = "loss")
+        plt.savefig("loss_fig.png")
+        plt.close()
+        
+        plt.figure(figsize = (10, 6))
+        plt.x_label("epoch")
+        plt.plot(end_reward_list, label = "end_reward")
+        plt.plot(end_reward_list, label = "averange_reward")
+        plt.savefig("reward_fig.png")
+        plt.close()
         
         self.Q_target.save("Q_target_model.h5")
         
@@ -282,21 +303,21 @@ class Train() :
                 else :
                     predict_Q = np.squeeze(self.Q.predict(self.add_noise(cur_shot)))
                     
-                    if predict_Q.sum() == 0 :
+                    if predict_Q.sum() <= 0.1 :
                         cur_action = random.randrange(set.actions_num)
                     else :
                         w = predict_Q
                         w[w < 0] = 0.0
-                        w = np.exp(w)
+                        w = np.exp(w) - 1
                         w /= w.sum()
                         cur_action = np.random.choice(np.arange(set.actions_num), p = w)
                     
                     #cur_action = np.argmax(predict_Q)
                     #print(predict_Q)
-                    print("choose", cur_action, "with higher Q:", predict_Q[cur_action])
+                    print("at map", stepQueue.getCurMap(cur_shot), "choose", cur_action, "with Q:", predict_Q[cur_action])
                     
                 self.do_control(cur_action)
-                nxt_shot = self.get_screenshot()
+            # end for step_test
             
             end_map = stepQueue.getCurMap(cur_shot)
             end_map_list.append(end_map)

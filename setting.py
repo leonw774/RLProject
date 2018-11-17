@@ -15,7 +15,7 @@ class TrainingSetting() :
     shot_resize = (shot_w, shot_h)
     shot_intv_time = 0.01
     shot_wait_max = 100
-    noise_range = 0.01
+    noise_range = 0.008
     
     def get_game_region(title = None) :
         if title :
@@ -39,7 +39,8 @@ class TrainingSetting() :
     # end get_game_region
 
     # Q NET SETTING
-    model_input_shape = (shot_h, shot_w, shot_c)    
+    model_input_shape = (shot_h, shot_w, shot_c)
+    learning_rate = 0.02
     
     # REWARD SETTING
     mapname_list = sorted(os.listdir("map/"), key = sorting_filename_as_int)
@@ -54,34 +55,33 @@ class TrainingSetting() :
     actions_num = (mouse_straight_angles + mouse_round_angles) * 2
     # ROUND ACTION ONLY HAS CLOCKWISE BECAUSE COUNTER-CLOCKWISE IS USELESS
     # {slow straight(12), fast straight(12), cwise round slow / fast(12), ccwise round slow / fast(12)}
-    do_control_pause = 0.03
+    do_control_pause = 0.04
 
     # STEP QUEUE SETTING
-    stepQueue_length_max = 4000 # set 0 to be no limit
+    stepQueue_length_max = 2400 # set 0 to be no limit
 
     # TRAINING SETTING
     epsilon = 1.0
     eps_min = 0.25
-    eps_decay = 0.995 
+    eps_decay = 0.996
         
     check_stuck = True
-    stuck_thrshld = 60
+    stuck_thrshld = 100
     
     use_p_normalizeation = False
     ignore_zero_reward = True
-    ignore_zero_reward_p = 0.99
+    ignore_zero_reward_p = 0.9
     
-    epoches = 200
-    steps_epoch = 300
-    train_thrshld = 81
+    epoches = 800
+    steps_epoch = 200
+    train_thrshld = 80
     steps_train = 4
     train_size = 64
-    steps_update_target = 80 # set to 0 to disable
+    steps_update_target = 75 # set to 0 to disable
     
-    no_reward_break = False
+    eps_test = 0.05
+    steps_test = 100
     
-    eps_test = 0.1
-    steps_test = 50
     
     
     
