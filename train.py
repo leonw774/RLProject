@@ -170,6 +170,7 @@ class Train() :
         loss_list = []
         end_reward_list = []
         averange_reward_list = []
+        averange_Q_list = []
         
         for e in range(set.epoches) :
             
@@ -177,6 +178,8 @@ class Train() :
             
             this_epoch_eps = max(set.eps_min, set.epsilon * (set.eps_decay ** e), random.random())
             avrg_reward = 0
+            avrg_Q = 0
+            avrg_Q_num = 0
             stuck_count = 0
             loss = 0
 
@@ -200,7 +203,10 @@ class Train() :
                         else :
                             cur_action = np.random.choice(np.arange(set.actions_num))
                 else :
-                    cur_action = np.argmax(self.Q.predict(self.add_noise(cur_shot)))
+                    pred = self.Q.predict(self.add_noise(cur_shot))
+                    cur_action = np.argmax(pred)
+                    avrg_Q += pred[cur_action]
+                    avrg_Q_num += 1
                 
                 self.do_control(cur_action)
                 
@@ -222,10 +228,10 @@ class Train() :
                         sys.stdout.flush()
                         break
                 
-                if not set.ignore_zero_reward or cur_reward != 0 or random.random() < (set.ignore_zero_reward_p ** n) :
+                if not set.ignore_zero_r or cur_reward != 0 or random.random() < min(set.ignore_zero_r_p_min, set.ignore_zero_r_p ** e) :
                     stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
                 
-                if (stepQueue.getLength() > set.train_thrshld) and n % set.steps_train == 0 :
+                if (stepQueue.getLength() > set.train_thrshld) and n + 1 % set.steps_train == 0 :
                     # Experience Replay
                     random_step = random.randint(1, stepQueue.getLength() - set.train_size)
                     trn_cur_s, trn_a, trn_r, trn_nxt_s = stepQueue.getStepsAsArray(random_step, set.train_size)
@@ -257,6 +263,7 @@ class Train() :
             loss_list.append(loss)
             end_reward_list.append(end_reward)
             averange_reward_list.append(avrg_reward)
+            averange_Q_list.append(float(avrg_Q) / float(avrg_Q_num))
             
             #stepQueue.clear()
             self.Q_target.save("Q_target_model.h5")
@@ -273,9 +280,15 @@ class Train() :
         
         plt.figure(figsize = (10, 6))
         plt.x_label("epoch")
-        plt.plot(end_reward_list, label = "end_reward")
-        plt.plot(end_reward_list, label = "averange_reward")
+        plt.plot(end_reward_list, label = "end reward")
+        plt.plot(end_reward_list, label = "averange reward")
         plt.savefig("reward_fig.png")
+        plt.close()
+        
+        plt.figure(figsize = (10, 6))
+        plt.xlabel("epoch")
+        plt.plot(averange_Q_list, label = "averange Q")
+        plt.savefig("Q_fig.png")
         plt.close()
         
         self.Q_target.save("Q_target_model.h5")
