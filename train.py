@@ -20,7 +20,7 @@ class Train() :
         
         self.GameRegion = set.get_game_region("Getting Over It")
         self.directInput = Keys()
-        self.model_optimizer = optimizers.sgd(lr = set.learning_rate, momentum = 0.5, decay = 1e-6)
+        self.model_optimizer = optimizers.rmsprop(lr = set.learning_rate, decay = 1e-6)
         
         self.Q = QNet(set.model_input_shape, set.actions_num)
         self.Q.summary()
@@ -205,7 +205,7 @@ class Train() :
                 else :
                     pred = self.Q.predict(self.add_noise(cur_shot))
                     cur_action = np.argmax(pred)
-                    avrg_Q += pred[cur_action]
+                    avrg_Q += np.max(pred)
                     avrg_Q_num += 1
                 
                 self.do_control(cur_action)
@@ -224,14 +224,14 @@ class Train() :
                     if stuck_count > set.stuck_thrshld :
                         loss *= (float(set.steps_epoch) / float(n))
                         avrg_reward *= (float(set.steps_epoch) / float(n))
-                        sys.stdout.write("\tat step " +  str(n) + " ")
+                        sys.stdout.write("at step " +  str(n) + " ")
                         sys.stdout.flush()
                         break
                 
                 if not set.ignore_zero_r or cur_reward != 0 or random.random() < min(set.ignore_zero_r_p_min, set.ignore_zero_r_p ** e) :
                     stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
                 
-                if (stepQueue.getLength() > set.train_thrshld) and n + 1 % set.steps_train == 0 :
+                if (stepQueue.getLength() > set.train_thrshld) and n % set.steps_train == 0 :
                     # Experience Replay
                     random_step = random.randint(1, stepQueue.getLength() - set.train_size)
                     trn_cur_s, trn_a, trn_r, trn_nxt_s = stepQueue.getStepsAsArray(random_step, set.train_size)
@@ -252,18 +252,19 @@ class Train() :
                     
                     loss += self.Q.train_on_batch(trn_cur_s, new_r)[0] / float(set.steps_epoch)
                     
-                if set.steps_update_target > 0 and n % set.steps_update_target == 0 and n > set.train_thrshld :
+                if set.steps_update_target > 0 and n + 1 % set.steps_update_target == 0 and n > set.train_thrshld :
                     #print("assign Qtarget")
                     self.Q_target.set_weights(self.Q.get_weights())
                     self.Q_target.save("Q_target_model.h5")
                     
             # end for(STEP_PER_EPOCH)
             end_reward = stepQueue.getCurMap(cur_shot)
-            print("epoch: %d\tat map %d\tloss: %.4f" % (e, end_reward, loss))
+            print("\tend %d\tat map %d\tloss: %.4f" % (e, end_reward, loss))
+            if loss > 10.0 : loss = 10.0
             loss_list.append(loss)
             end_reward_list.append(end_reward)
             averange_reward_list.append(avrg_reward)
-            averange_Q_list.append(float(avrg_Q) / float(avrg_Q_num))
+            if avrg_Q_num > 0 : averange_Q_list.append(float(avrg_Q) / float(avrg_Q_num))
             
             #stepQueue.clear()
             self.Q_target.save("Q_target_model.h5")
@@ -279,7 +280,7 @@ class Train() :
         plt.close()
         
         plt.figure(figsize = (10, 6))
-        plt.x_label("epoch")
+        plt.xlabel("epoch")
         plt.plot(end_reward_list, label = "end reward")
         plt.plot(end_reward_list, label = "averange reward")
         plt.savefig("reward_fig.png")
@@ -310,24 +311,19 @@ class Train() :
             for n in range(set.steps_test) :
                 cur_shot = self.get_screenshot()
                 
-                if random.random() <= set.eps_test :
+                predict_Q = np.squeeze(self.Q.predict(self.add_noise(cur_shot)))
+                if predict_Q.sum() <= 0.01 :
                     cur_action = random.randrange(set.actions_num)
-                    print("choose", cur_action, "as random")
+                elif random.random() <= set.eps_test :
+                    w = predict_Q
+                    w[w < 0] = 0.0
+                    w = np.exp(w) - 1
+                    w /= w.sum()
+                    cur_action = np.random.choice(np.arange(set.actions_num), p = w)
                 else :
-                    predict_Q = np.squeeze(self.Q.predict(self.add_noise(cur_shot)))
-                    
-                    if predict_Q.sum() <= 0.1 :
-                        cur_action = random.randrange(set.actions_num)
-                    else :
-                        w = predict_Q
-                        w[w < 0] = 0.0
-                        w = np.exp(w) - 1
-                        w /= w.sum()
-                        cur_action = np.random.choice(np.arange(set.actions_num), p = w)
-                    
-                    #cur_action = np.argmax(predict_Q)
-                    #print(predict_Q)
-                    print("at map", stepQueue.getCurMap(cur_shot), "choose", cur_action, "with Q:", predict_Q[cur_action])
+                    cur_action = np.argmax(predict_Q)
+                #print(predict_Q)
+                print("at map", stepQueue.getCurMap(cur_shot), "choose", cur_action, "with Q:", predict_Q[cur_action])
                     
                 self.do_control(cur_action)
             # end for step_test

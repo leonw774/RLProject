@@ -40,12 +40,11 @@ class TrainingSetting() :
 
     # Q NET SETTING
     model_input_shape = (shot_h, shot_w, shot_c)
-    learning_rate = 0.1
+    learning_rate = 0.01
     
     # REWARD SETTING
     mapname_list = sorted(os.listdir("map/"), key = sorting_filename_as_int)
     no_move_thrshld = shot_h * shot_w * shot_c * 0.03 * ((shot_c - 1) * 0.01 + 1)
-    
     gamma = 0.5
     total_r = len(mapname_list)
 
@@ -69,7 +68,7 @@ class TrainingSetting() :
     stuck_thrshld = 100
     use_p_normalizeation = False
     ignore_zero_r = True
-    ignore_zero_r_p = 0.99
+    ignore_zero_r_p = 0.996
     ignore_zero_r_p_min = 0.25
     
     epoches = 1000
