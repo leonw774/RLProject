@@ -114,13 +114,13 @@ class Train() :
                 id -= set.mouse_round_angles * 2
             
             if id < set.mouse_round_angles : # slow
-                radius = 560
+                radius = 540
                 delta = 4
                 proportion = 0.8
             else : # fast
-                radius = 720
-                delta = 18
-                proportion = 0.66
+                radius = 780
+                delta = 20
+                proportion = 0.67
             
             angles_divide = 36.0
             angle_bias = 4.0
@@ -171,6 +171,8 @@ class Train() :
         end_reward_list = []
         averange_reward_list = []
         averange_Q_list = []
+        logfile = file("log.csv", 'w')
+        logfile.write("epoch, loss, end_reward, avg_reward, avg_Q")
         
         for e in range(set.epoches) :
             
@@ -259,15 +261,18 @@ class Train() :
                     
             # end for(STEP_PER_EPOCH)
             end_reward = stepQueue.getCurMap(cur_shot)
+            if avrg_Q_num > 0 : avrg_Q /= float(avrg_Q_num)
+            
             print("\tend %d\tat map %d\tloss: %.4f" % (e, end_reward, loss))
-            if loss > 10.0 : loss = 10.0
+            logfile.write(str(loss) + "," + str(avrg_reward) + "," + str(avrg_reward) + "," + str(avrg_Q))
             loss_list.append(loss)
             end_reward_list.append(end_reward)
             averange_reward_list.append(avrg_reward)
-            if avrg_Q_num > 0 : averange_Q_list.append(float(avrg_Q) / float(avrg_Q_num))
+            averange_Q_list.append(avrg_Q)
             
             #stepQueue.clear()
             self.Q_target.save("Q_target_model.h5")
+            
             # Restart Game...
             self.quitgame()
             
@@ -275,6 +280,7 @@ class Train() :
         
         plt.figure(figsize = (10, 6))
         plt.xlabel("epoch")
+        plt.ylim(0, 2)
         plt.plot(loss_list, label = "loss")
         plt.savefig("loss_fig.png")
         plt.close()
