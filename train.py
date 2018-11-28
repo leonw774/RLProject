@@ -156,6 +156,27 @@ class Train() :
         # click "QUIT"
         click(self.GameRegion[0] + self.GameRegion[2] * 0.15, self.GameRegion[1] + self.GameRegion[3] * 1.05)
         sleep(10)
+        
+    def draw_fig(loss, avgQ, endR, avgR) :
+        plt.figure(figsize = (10, 6))
+        plt.xlabel("epoch")
+        plt.ylim(0, 2)
+        plt.plot(loss, label = "loss")
+        plt.savefig("loss_fig.png")
+        plt.close()
+        
+        plt.figure(figsize = (10, 6))
+        plt.xlabel("epoch")
+        plt.plot(endR, label = "end reward")
+        plt.plot(avgR, label = "averange reward")
+        plt.savefig("reward_fig.png")
+        plt.close()
+        
+        plt.figure(figsize = (10, 6))
+        plt.xlabel("epoch")
+        plt.plot(avgQ, label = "averange Q")
+        plt.savefig("Q_fig.png")
+        plt.close()
     
     def fit(self) :
         '''
@@ -168,15 +189,17 @@ class Train() :
         
         stepQueue = StepQueue()
         loss_list = []
-        end_reward_list = []
-        averange_reward_list = []
-        averange_Q_list = []
-        logfile = file("log.csv", 'w')
+        endR_list = []
+        avgR_list = []
+        avgQ_list = []
+        logfile = open("log.csv", 'w')
         logfile.write("epoch, loss, end_reward, avg_reward, avg_Q")
         
         for e in range(set.epoches) :
             
             self.newgame()
+            sys.stdout.write(str(e) + ":")
+            sys.stdout.flush()
             
             this_epoch_eps = max(set.eps_min, set.epsilon * (set.eps_decay ** e), random.random())
             avrg_reward = 0
@@ -263,46 +286,32 @@ class Train() :
             end_reward = stepQueue.getCurMap(cur_shot)
             if avrg_Q_num > 0 : avrg_Q /= float(avrg_Q_num)
             
-            print("\tend %d\tat map %d\tloss: %.4f" % (e, end_reward, loss))
+            print("\tend at map %d\tloss: %.4f" % (end_reward, loss))
             logfile.write(str(loss) + "," + str(avrg_reward) + "," + str(avrg_reward) + "," + str(avrg_Q))
             loss_list.append(loss)
-            end_reward_list.append(end_reward)
-            averange_reward_list.append(avrg_reward)
-            averange_Q_list.append(avrg_Q)
+            endR_list.append(end_reward)
+            avgR_list.append(avrg_reward)
+            avgQ_list.append(avrg_Q)
+            if (n + 1) % 50 == 0 :
+                self.draw_fig(loss_list, avgR_list, endR_list, avgQ_list)
             
             #stepQueue.clear()
             self.Q_target.save("Q_target_model.h5")
+            
+            if (n + 1) % 50 == 0 :
+                print(self.test("Q_target_model.h5", verdict = False)[0])
             
             # Restart Game...
             self.quitgame()
             
         # end for(epoches)
         
-        plt.figure(figsize = (10, 6))
-        plt.xlabel("epoch")
-        plt.ylim(0, 2)
-        plt.plot(loss_list, label = "loss")
-        plt.savefig("loss_fig.png")
-        plt.close()
-        
-        plt.figure(figsize = (10, 6))
-        plt.xlabel("epoch")
-        plt.plot(end_reward_list, label = "end reward")
-        plt.plot(end_reward_list, label = "averange reward")
-        plt.savefig("reward_fig.png")
-        plt.close()
-        
-        plt.figure(figsize = (10, 6))
-        plt.xlabel("epoch")
-        plt.plot(averange_Q_list, label = "averange Q")
-        plt.savefig("Q_fig.png")
-        plt.close()
-        
+        self.draw_fig(loss_list, avgR_list, endR_list, avgQ_list)
         self.Q_target.save("Q_target_model.h5")
         
     # end def fit
     
-    def test(self, model_weight_name, rounds = 1) :
+    def test(self, model_weight_name, rounds = 1, verdict = True) :
         print("test begin for:", model_weight_name)
         self.Q = load_model(model_weight_name)
         end_map_list = []
@@ -318,7 +327,7 @@ class Train() :
                 cur_shot = self.get_screenshot()
                 
                 predict_Q = np.squeeze(self.Q.predict(self.add_noise(cur_shot)))
-                if predict_Q.sum() <= 0.01 :
+                if predict_Q.sum() < -0.01 and predict_Q.sum() > -0.01 :
                     cur_action = random.randrange(set.actions_num)
                 elif random.random() <= set.eps_test :
                     w = predict_Q
@@ -343,7 +352,7 @@ class Train() :
             # Exit Game...
             self.quitgame()
         
-        print(end_map_list)
+        return end_map_list
 
     # end def test
     
@@ -380,6 +389,6 @@ if __name__ == '__main__' :
     #train.random_action()
     train.fit()
     print(datetime.now() - starttime)
-    train.test("Q_target_model.h5", 20)
+    train.test("Q_target_model.h5", 50)
     
 

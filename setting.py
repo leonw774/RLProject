@@ -54,41 +54,31 @@ class TrainingSetting() :
     actions_num = (mouse_straight_angles + mouse_round_angles) * 2
     # ROUND ACTION ONLY HAS CLOCKWISE BECAUSE COUNTER-CLOCKWISE IS USELESS
     # {slow straight(12), fast straight(12), cwise round slow / fast(12), ccwise round slow / fast(12)}
-    do_control_pause = 0.025
+    do_control_pause = 0.02
 
     # STEP QUEUE SETTING
-    stepQueue_length_max = 6000 # set 0 to be no limit
+    stepQueue_length_max = 8000 # set 0 to be no limit
 
     # TRAINING SETTING
     epsilon = 1.0
     eps_min = 0.1
-    eps_decay = 0.996
+    eps_decay = 0.99
         
     check_stuck = True
-    stuck_thrshld = 100
+    stuck_thrshld = 90
     use_p_normalizeation = False
     ignore_zero_r = False
-    ignore_zero_r_p = 0.996
+    ignore_zero_r_p = 0.999
     ignore_zero_r_p_min = 0.5
     
-    epoches = 1000
-    steps_epoch = 240
+    epoches = 500
+    steps_epoch = 200
     train_thrshld = 90
     steps_train = 4
     train_size = 64
     steps_update_target = 80 # set to 0 to disable
     
     eps_test = 0.1
-    steps_test = 120
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+    steps_test = 150
     
     
