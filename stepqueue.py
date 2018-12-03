@@ -9,7 +9,6 @@ class StepQueue() :
         self.scrshotList = [] 
         self.actionList = []
         self.rewardList = []
-        self.nxtScrshotsList = []
         self.actionsOccurrence = np.zeros(set.actions_num)
         self.mapList = []
         
@@ -26,16 +25,15 @@ class StepQueue() :
         self.incline_rate = (1 / set.gamma) ** (1 / len(self.mapList))
         # so that the reward of last map, after times gamma, is exactly equal to total_r
         
-        print("no_move: ", set.no_move_thrshld)
-        print("map_score:", self.map_score)
-        print("incline_rate:", self.incline_rate)
+        #print("no_move: ", set.no_move_thrshld)
+        #print("map_score:", self.map_score)
+        #print("incline_rate:", self.incline_rate)
     
     def addStep(self, scrshot, action, reward, nxt_scrshot) :
         if len(self.scrshotList) + 1 == set.stepQueue_length_max :
             self.scrshotList.pop(0)
             self.actionList.pop(0)
             self.rewardList.pop(0)
-            self.nxtScrshotsList.pop(0)
         
         if (scrshot.shape != set.shot_shape) or (nxt_scrshot.shape != set.shot_shape) :
             print("scrshot shape no good: Received", scrshot.shape, " but ", set.shot_shape, " is expected.")
@@ -44,14 +42,12 @@ class StepQueue() :
         self.scrshotList.append(scrshot[0]) # np array
         self.actionList.append(int(action)) # int
         self.rewardList.append(reward) # np array (QNet's out)
-        self.nxtScrshotsList.append(nxt_scrshot[0]) # np array
         self.actionsOccurrence[action] += 1 # record occurrence of actions
     
     def clear(self) :
         self.scrshotList = [] 
         self.actionList = []
         self.rewardList = []
-        self.nxtScrshotsList = []
         self.actionsOccurrence = np.zeros(set.actions_num)
         
     def getLength(self) :

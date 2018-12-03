@@ -62,23 +62,23 @@ class TrainingSetting() :
     # TRAINING SETTING
     epsilon = 1.0
     eps_min = 0.1
-    eps_decay = 0.99
+    eps_decay = 0.995
         
     check_stuck = True
-    stuck_thrshld = 90
+    stuck_thrshld = 100
     use_p_normalizeation = False
-    ignore_zero_r = False
-    ignore_zero_r_p = 0.999
+    ignore_zero_r = True
+    ignore_zero_r_p = 0.99
     ignore_zero_r_p_min = 0.5
     
-    epoches = 500
+    epoches = 1000
     steps_epoch = 200
-    train_thrshld = 90
+    train_thrshld = 100
     steps_train = 4
     train_size = 64
-    steps_update_target = 80 # set to 0 to disable
+    steps_update_target = 50 # set to 0 to disable
     
-    eps_test = 0.1
-    steps_test = 150
+    eps_test = 0.2
+    steps_test = 200
     
     
