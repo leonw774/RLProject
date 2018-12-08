@@ -40,7 +40,8 @@ class TrainingSetting() :
 
     # Q NET SETTING
     model_input_shape = (shot_h, shot_w, shot_c)
-    learning_rate = 0.002
+    learning_rate = 0.0025
+    learning_rate_decay = 1e-4
     
     # REWARD SETTING
     mapname_list = sorted(os.listdir("map/"), key = sorting_filename_as_int)
@@ -54,31 +55,31 @@ class TrainingSetting() :
     actions_num = (mouse_straight_angles + mouse_round_angles) * 2
     # ROUND ACTION ONLY HAS CLOCKWISE BECAUSE COUNTER-CLOCKWISE IS USELESS
     # {slow straight(12), fast straight(12), cwise round slow / fast(12), ccwise round slow / fast(12)}
-    do_control_pause = 0.02
+    do_control_pause = 0.03
 
     # STEP QUEUE SETTING
-    stepQueue_length_max = 8000 # set 0 to be no limit
+    stepQueue_length_max = 10000 # set 0 to be no limit
 
     # TRAINING SETTING
+    use_target_Q = True
     epsilon = 1.0
     eps_min = 0.1
-    eps_decay = 0.995
+    eps_decay = 0.99
         
     check_stuck = True
     stuck_thrshld = 100
     use_p_normalizeation = False
     ignore_zero_r = True
     ignore_zero_r_p = 0.99
-    ignore_zero_r_p_min = 0.5
+    ignore_zero_r_p_min = 0.9
     
     epoches = 1000
     steps_epoch = 200
     train_thrshld = 100
     steps_train = 4
     train_size = 64
-    steps_update_target = 50 # set to 0 to disable
     
-    eps_test = 0.2
-    steps_test = 200
+    eps_test = 0.1
+    steps_test = 150
     
     

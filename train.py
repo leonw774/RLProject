@@ -20,7 +20,7 @@ class Train() :
         
         self.GameRegion = set.get_game_region("Getting Over It")
         self.directInput = Keys()
-        self.model_optimizer = optimizers.rmsprop(lr = set.learning_rate, decay = 1e-6)
+        self.model_optimizer = optimizers.rmsprop(lr = set.learning_rate, decay = set.learning_rate_decay)
         
         self.Q = QNet(set.model_input_shape, set.actions_num)
         self.Q.summary()
@@ -114,13 +114,13 @@ class Train() :
                 id -= set.mouse_round_angles * 2
             
             if id < set.mouse_round_angles : # slow
-                radius = 540
+                radius = 550
                 delta = 4
                 proportion = 0.8
             else : # fast
-                radius = 780
-                delta = 20
-                proportion = 0.67
+                radius = 750
+                delta = 22
+                proportion = 0.7
             
             angles_divide = 36.0
             angle_bias = 4.0
@@ -198,7 +198,7 @@ class Train() :
             # click "NEW GAME"
             self.newgame()
             stepQueue = StepQueue()
-            cur_shot = self.get_screenshot() 
+            cur_shot = self.get_screenshot(wait_no_move = True) 
             
             for n in range(set.steps_test) :
                 cur_shot = self.get_screenshot()
@@ -285,7 +285,7 @@ class Train() :
                         else :
                             cur_action = np.random.choice(np.arange(set.actions_num))
                 else :
-                    predQ = self.Q.predict(self.add_noise(cur_shot))
+                    predQ = np.squeeze(self.Q.predict(self.add_noise(cur_shot)))
                     cur_action = np.argmax(predQ)
                     avrg_Q += np.max(predQ)
                     Q_count += 1
@@ -307,17 +307,17 @@ class Train() :
                     if stuck_count > set.stuck_thrshld :
                         loss *= (float(set.steps_epoch) / float(n))
                         avrg_reward *= (float(set.steps_epoch) / float(n))
-                        sys.stdout.write(str(n) + " ")
+                        sys.stdout.write(str(n))
                         sys.stdout.flush()
                         break
-                
+                        
                 if not set.ignore_zero_r or cur_reward != 0 or random.random() < min(set.ignore_zero_r_p_min, set.ignore_zero_r_p ** e) :
-                    stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
+                    stepQueue.addStep(cur_shot, cur_action, cur_reward)
                 
                 if (stepQueue.getLength() > set.train_thrshld) and n % set.steps_train == 0 :
                     # Experience Replay
-                    random_step = random.randint(1, stepQueue.getLength() - set.train_size)
-                    trn_cur_s, trn_a, trn_r, trn_nxt_s = stepQueue.getStepsAsArray(random_step, set.train_size + 1)
+                    random_step = random.randint(0, stepQueue.getLength() - set.train_size - 1)
+                    trn_cur_s, trn_a, trn_r = stepQueue.getStepsAsArray(random_step, set.train_size + 1)
                     
                     # make next predicted reward array and train input array at same time
                     new_r = np.zeros((set.train_size, set.actions_num))
@@ -333,22 +333,25 @@ class Train() :
                     
                     #print("new_r\n", new_r[0])
                     
-                    loss += self.Q.train_on_batch(trn_cur_s, new_r)[0] / float(set.steps_epoch)
+                    loss += self.Q.train_on_batch(trn_cur_s[:set.train_size], new_r)[0] / float(set.steps_epoch)
                     
-                if set.steps_update_target > 0 and n + 1 % set.steps_update_target == 0 and n > set.train_thrshld :
+                if set.steps_update_target > 0 and (n + 1) % set.steps_update_target == 0 and n > set.train_thrshld :
                     #print("assign Qtarget")
                     self.Q_target.set_weights(self.Q.get_weights())
-                    self.Q_target.save("Q_target_model.h5")
+                    self.Q_target.save("Q_model.h5")
                     
             # end for(STEP_PER_EPOCH)
+            self.quitgame()
+            
             end_reward = stepQueue.getCurMap(cur_shot)
             if Q_count > 0 :
                 avrg_Q /= float(Q_count)
                 Q_loss /= float(Q_count)
             
-            log_string = str(e) + "," str(loss) + "," + str(end_reward) + "," + str(avrg_reward) + "," + str(avrg_Q) + "," + str(Q_loss) + "\n"
-            logfile.write(log_string)
+            # write log file and log list
             print("\tend at map %d\tloss: %.4f  avrgQ: %.3f  Qloss: %.3f" % (end_reward, loss, avrg_Q, Q_loss))
+            log_string = str(e) + "," + str(loss) + "," + str(end_reward) + "," + str(avrg_reward) + "," + str(avrg_Q) + "," + str(Q_loss) + "\n"
+            logfile.write(log_string)
             loss_list.append(loss)
             endR_list.append(end_reward)
             avgR_list.append(avrg_reward)
@@ -357,17 +360,17 @@ class Train() :
             if (e + 1) % 20 == 0 :
                 self.draw_fig(loss_list, avgR_list, endR_list, avgQ_list, Qacc_list)
             
-            #stepQueue.clear()
-            self.Q_target.save("Q_target_model.h5")
-            self.quitgame()
-            
+            if use_target_Q & stepQueue.getLength() > set.train_thrshld :
+                self.Q_target.set_weights(self.Q.get_weights())
+                self.Q_target.save("Q_model.h5")
+            else :
+                self.Q.save("Q_model.h5")
+                
             if (e + 1) % 10 == 0 :
-                print("test: ", self.test("Q_target_model.h5", verdict = False)[0])
+                print("test: ", self.test("Q_model.h5", verdict = False)[0])
             
         # end for(epoches)
-        
         self.draw_fig(loss_list, avgR_list, endR_list, avgQ_list, Qacc_list)
-        self.Q_target.save("Q_target_model.h5")
         
     # end def fit
     
@@ -404,6 +407,6 @@ if __name__ == '__main__' :
     #train.random_action()
     train.fit()
     print(datetime.now() - starttime)
-    print(train.test("Q_target_model.h5", 50))
+    print(train.test("Q_model.h5", 50))
     
 
