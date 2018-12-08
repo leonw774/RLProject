@@ -157,7 +157,7 @@ class Train() :
         click(self.GameRegion[0] + self.GameRegion[2] * 0.15, self.GameRegion[1] + self.GameRegion[3] * 1.05)
         sleep(10)
         
-    def draw_fig(self, loss, avgQ, endR, avgR, Qacc) :
+    def draw_fig(self, loss, avgQ, endR, avgR, Qloss, testEndR) :
         plt.figure(figsize = (10, 8))
         plt.xlabel("epoch")
         plt.ylim(0, 0.2)
@@ -183,9 +183,16 @@ class Train() :
         
         plt.figure(figsize = (10, 6))
         plt.xlabel("epoch")
-        plt.plot(Qacc, label = "predicted Q loss")
+        plt.plot(Qloss, label = "predicted Q loss")
         plt.legend(loc = "upper right")
         plt.savefig("Q_loss_fig.png")
+        plt.close()
+        
+        plt.figure(figsize = (10, 6))
+        plt.xlabel("test#")
+        plt.plot(testEndR, label = "test_end_reward")
+        plt.legend(loc = "upper right")
+        plt.savefig("test_result_fig.png")
         plt.close()
         
     def test(self, model_weight_name, rounds = 1, verdict = True) :
@@ -244,7 +251,9 @@ class Train() :
         endR_list = []
         avgR_list = []
         avgQ_list = []
-        Qacc_list = []
+        Qloss_list = []
+        test_endR_list = []
+        
         logfile = open("log.csv", 'w')
         logfile.write("epoch, loss, end_reward, avg_reward, avg_Q, Q_loss\n")
         
@@ -356,9 +365,9 @@ class Train() :
             endR_list.append(end_reward)
             avgR_list.append(avrg_reward)
             avgQ_list.append(avrg_Q)
-            Qacc_list.append(Q_loss)
-            if (e + 1) % 20 == 0 :
-                self.draw_fig(loss_list, avgR_list, endR_list, avgQ_list, Qacc_list)
+            Qloss_list.append(Q_loss)
+            if (e + 1) % 50 == 0 :
+                self.draw_fig(loss_list, avgR_list, endR_list, avgQ_list, Qloss_list, test_endR_list)
             
             if use_target_Q & stepQueue.getLength() > set.train_thrshld :
                 self.Q_target.set_weights(self.Q.get_weights())
@@ -367,10 +376,12 @@ class Train() :
                 self.Q.save("Q_model.h5")
                 
             if (e + 1) % 10 == 0 :
-                print("test: ", self.test("Q_model.h5", verdict = False)[0])
+                test_endR = self.test("Q_model.h5", verdict = False)[0]
+                test_endR_list.append(test_endR);
+                print("test: ", test_endR)
             
         # end for(epoches)
-        self.draw_fig(loss_list, avgR_list, endR_list, avgQ_list, Qacc_list)
+        self.draw_fig(loss_list, avgR_list, endR_list, avgQ_list, Qloss_list, test_endR_list)
         
     # end def fit
     
