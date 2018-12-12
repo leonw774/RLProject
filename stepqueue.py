@@ -26,8 +26,8 @@ class StepQueue() :
         # so that the reward of last map, after times gamma, is exactly equal to total_r
         
         #print("no_move: ", set.no_move_thrshld)
-        #print("map_score:", self.map_score)
-        #print("incline_rate:", self.incline_rate)
+        print("map_score:", self.map_score)
+        print("incline_rate:", self.incline_rate)
     
     def addStep(self, scrshot, action, reward) :
         if len(self.scrshotList) + 1 == set.stepQueue_length_max :

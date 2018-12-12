@@ -40,7 +40,7 @@ class TrainingSetting() :
 
     # Q NET SETTING
     model_input_shape = (shot_h, shot_w, shot_c)
-    learning_rate = 0.0025
+    learning_rate = 0.001
     learning_rate_decay = 1e-4
     
     # REWARD SETTING
@@ -64,22 +64,25 @@ class TrainingSetting() :
     use_target_Q = True
     epsilon = 1.0
     eps_min = 0.1
-    eps_decay = 0.99
+    eps_decay = 0.975
         
     check_stuck = True
     stuck_thrshld = 100
     use_p_normalizeation = False
-    ignore_zero_r = True
+    ignore_zero_r = False
     ignore_zero_r_p = 0.99
-    ignore_zero_r_p_min = 0.9
+    ignore_zero_r_p_min = 0.5
     
-    epoches = 1000
-    steps_epoch = 200
+    epoches = 400
+    steps_epoch = 150
     train_thrshld = 100
     steps_train = 4
     train_size = 64
     
+    test_intv = 5
+    draw_fig_intv = 20
+    
     eps_test = 0.1
-    steps_test = 150
+    steps_test = 100
     
     
