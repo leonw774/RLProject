@@ -212,7 +212,7 @@ class Train() :
         
             # click "NEW GAME"
             self.newgame()
-            stepQueue = StepQueue()
+            test_stepQueue = StepQueue()
             cur_shot = self.get_screenshot(wait_no_move = True) 
             
             for n in range(set.steps_test) :
@@ -230,12 +230,12 @@ class Train() :
                 else :
                     cur_action = np.argmax(predict_Q)
                 #print(predict_Q)
-                if verdict : print("at map", stepQueue.getCurMap(cur_shot), "choose", cur_action, "with Q:", predict_Q[cur_action])
+                if verdict : print("at map", test_stepQueue.getCurMap(cur_shot), "choose", cur_action, "with Q:", predict_Q[cur_action])
                     
                 self.do_control(cur_action)
             # end for step_test
             
-            end_map = stepQueue.getCurMap(cur_shot)
+            end_map = test_stepQueue.getCurMap(cur_shot)
             end_map_list.append(end_map)
             
             if verdict : print("test end\tat map: ", end_map)
@@ -387,22 +387,21 @@ class Train() :
     def random_action(self, steps = None) :
         # click "NEW GAME"
         self.newgame()
-        stepQueue = StepQueue()
+        random_stepQueue = StepQueue()
         if steps == None : steps = set.steps_test
         for n in range(steps) :
             cur_shot = self.get_screenshot(savefile = ("output/" + str(n) + ".png"))
             cur_action = random.randrange(set.actions_num)
             self.do_control(cur_action)
             nxt_shot = self.get_screenshot()
-            cur_reward = stepQueue.calReward(cur_shot, nxt_shot)
+            cur_reward = random_stepQueue.calReward(cur_shot, nxt_shot)
             print(cur_action, ",", cur_reward)
             if cur_reward == "stuck" :
                 print("at step", n)
                 screenshot(region = self.GameRegion).save("stuck_at_random.png")
                 break
-            stepQueue.addStep(cur_shot, cur_action, cur_reward, nxt_shot)
         
-        del stepQueue
+        del random_stepQueue
         print("test end, of reward: %.2f", cur_reward)
         # Exit Game...
         self.quitgame()
