@@ -141,7 +141,12 @@ class Train() :
     def newgame(self) :
         sleep(1)
         # click "NEW GAME"
-        click(self.GameRegion[0] + self.GameRegion[2] * 0.70, self.GameRegion[1] + self.GameRegion[3] * 0.40)
+        while(1) : # somrtimes the game is not responsive to keybroad, you have to try more times
+            shot1 = np.array(screenshot(region = self.GameRegion).convert('RGB').resize(set.shot_resize))
+            click(self.GameRegion[0] + self.GameRegion[2] * 0.70, self.GameRegion[1] + self.GameRegion[3] * 0.40)
+            sleep(0.2)
+            shot2 = np.array(screenshot(region = self.GameRegion).convert('RGB').resize(set.shot_resize))
+            if np.sum(np.abs(shot1 - shot2)) > set.no_move_thrshld : break
         sleep(8)
     
     def quitgame(self) :
@@ -150,7 +155,7 @@ class Train() :
         while(1) : # somrtimes the game is not responsive to keybroad, you have to try more times
             shot1 = np.array(screenshot(region = self.GameRegion).convert('RGB').resize(set.shot_resize))
             self.directInput.directKey("ESC")
-            sleep(1)
+            sleep(0.2)
             shot2 = np.array(screenshot(region = self.GameRegion).convert('RGB').resize(set.shot_resize))
             if np.sum(np.abs(shot1 - shot2)) > set.no_move_thrshld : break
         # click "QUIT"
@@ -367,12 +372,12 @@ class Train() :
             
             if set.use_target_Q & stepQueue.getLength() > set.train_thrshld :
                 self.Q_target.set_weights(self.Q.get_weights())
-                self.Q_target.save("Q_model" + str(e) + ".h5")
+                self.Q_target.save("Q_model.h5")
             else :
-                self.Q.save("Q_model" + str(e) + ".h5")
+                self.Q.save("Q_model.h5")
                 
             if (e + 1) % set.test_intv == 0 :
-                test_endMap = self.test("Q_model" + str(e) + ".h5", verdict = False)[0]
+                test_endMap = self.test("Q_model.h5", verdict = False)[0]
                 test_endMap_list.append(test_endMap);
                 print("test: ", test_endMap)
             

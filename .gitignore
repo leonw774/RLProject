@@ -109,3 +109,4 @@ venv.bak/
 *.png
 !map/*.png
 !models/*.h5
+!models/*.png
