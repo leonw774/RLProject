@@ -73,7 +73,7 @@ class TrainingSetting() :
     ignore_zero_r_p = 0.99
     ignore_zero_r_p_min = 0.5
     
-    epoches = 400
+    epoches = 300
     steps_epoch = 150
     train_thrshld = 80
     steps_train = 4
@@ -83,6 +83,6 @@ class TrainingSetting() :
     draw_fig_intv = 20
     
     eps_test = 0.1
-    steps_test = 80
+    steps_test = 50
     
     

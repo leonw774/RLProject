@@ -341,7 +341,7 @@ class Train() :
                     # make next predicted reward array and train input array at same time
                     new_r = np.zeros((set.train_size, set.actions_num))
                     for j in range(set.train_size) :
-                        if set.use_target_Q :
+                        if not set.use_target_Q :
                             new_r[j] = self.Q.predict(np.expand_dims(trn_cur_s[j], axis = 0))
                             predict_Q = self.Q.predict(np.expand_dims(trn_cur_s[j+1], axis = 0))
                         else :
