@@ -107,4 +107,4 @@ venv.bak/
 *.h5
 *.model
 map_new/*.png
-!models/*.h5
+!models/*/*.h5
