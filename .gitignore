@@ -104,5 +104,4 @@ venv.bak/
 .mypy_cache/
 
 # keras model file
-*.model
 map_new/*.png
