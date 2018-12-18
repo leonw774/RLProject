@@ -227,9 +227,9 @@ class Train() :
                 if predict_Q.sum() < -0.01 and predict_Q.sum() > -0.01 :
                     cur_action = random.randrange(set.actions_num)
                 elif random.random() <= set.eps_test :
+                    # soft max
                     w = predict_Q
-                    w[w < 0] = 0.0
-                    w = np.exp(w) - 1
+                    w = np.exp(w)
                     w /= w.sum()
                     cur_action = np.random.choice(np.arange(set.actions_num), p = w)
                 else :
