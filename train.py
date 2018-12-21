@@ -208,7 +208,7 @@ class Train() :
         plt.savefig("fig/test_end_map.png")
         plt.close()
         
-    def test(self, model_weight_name, rounds = 1, verdict = True) :
+    def test(self, model_weight_name, rounds = 1, goal = None, verdict = False) :
         if verdict : print("test begin for:", model_weight_name)
         testQ = load_model(model_weight_name)
         end_map_list = []
@@ -222,6 +222,12 @@ class Train() :
             
             for n in range(set.steps_test) :
                 cur_shot = self.get_screenshot()
+                
+                
+                if goal is not None :
+                    if test_stepQueue.getCurMap(cur_shot) >= goal :
+                        print("reached goal!")
+                        break
                 
                 predict_Q = np.squeeze(testQ.predict(self.add_noise(cur_shot)))
                 if predict_Q.sum() < -0.01 and predict_Q.sum() > -0.01 :
@@ -238,12 +244,13 @@ class Train() :
                 if verdict : print("at map", test_stepQueue.getCurMap(cur_shot), "choose", cur_action, "with Q:", predict_Q[cur_action])
                     
                 self.do_control(cur_action)
+                
             # end for step_test
             
             end_map = test_stepQueue.getCurMap(cur_shot)
             end_map_list.append(end_map)
             
-            if verdict : print("test end\tat map: ", end_map)
+            if verdict : print("test round ", i, " end\tat map: ", end_map)
         
             # Exit Game...
             self.quitgame()

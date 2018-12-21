@@ -104,7 +104,7 @@ venv.bak/
 .mypy_cache/
 
 # keras model file
-*.h5
+Q_model.h5
 *.model
 map_new/*.png
 !models/*/*.h5
