@@ -83,6 +83,6 @@ class TrainingSetting() :
     draw_fig_intv = 20
     
     eps_test = 0.1
-    steps_test = 50
+    steps_test = 100
     
     

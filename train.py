@@ -208,10 +208,13 @@ class Train() :
         plt.savefig("fig/test_end_map.png")
         plt.close()
         
-    def test(self, model_weight_name, rounds = 1, goal = None, verdict = False) :
+    def test(self, model_weight_name, rounds = 1, max_step = set.steps_test, goal = None, verdict = False) :
         if verdict : print("test begin for:", model_weight_name)
         testQ = load_model(model_weight_name)
-        end_map_list = []
+        if goal is not None :
+            test_result = np.zeros((rounds, 2))
+        else :
+            test_result = np.zeros((rounds))
         
         for i in range(rounds) :
         
@@ -220,13 +223,13 @@ class Train() :
             test_stepQueue = StepQueue()
             cur_shot = self.get_screenshot(wait_no_move = True) 
             
-            for n in range(set.steps_test) :
+            for n in range(max_step) :
                 cur_shot = self.get_screenshot()
-                
                 
                 if goal is not None :
                     if test_stepQueue.getCurMap(cur_shot) >= goal :
                         print("reached goal!")
+                        test_result[i] = np.array((n, True))
                         break
                 
                 predict_Q = np.squeeze(testQ.predict(self.add_noise(cur_shot)))
@@ -248,13 +251,19 @@ class Train() :
             # end for step_test
             
             end_map = test_stepQueue.getCurMap(cur_shot)
-            end_map_list.append(end_map)
+            
+            if goal is not None :
+                if end_map >= goal and test_result[i, 0] == 0:
+                    print("reached goal!")
+                    test_result[i] = np.array((max_step, True))
+            else :
+                test_result[I] = end_map
             
             if verdict : print("test round ", i, " end\tat map: ", end_map)
         
             # Exit Game...
             self.quitgame()
-        return end_map_list
+        return test_result
     # end def test
     
     def fit(self) :
@@ -428,6 +437,6 @@ if __name__ == '__main__' :
     #train.random_action()
     train.fit()
     print(datetime.now() - starttime)
-    print(train.test("Q_model.h5", 50))
+    print(train.test("Q_model.h5", rounds = 50))
     
     
