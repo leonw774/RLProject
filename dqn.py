@@ -115,7 +115,7 @@ class DQN() :
                 
                 if goal is not None :
                     if test_stepQueue.getCurMap(cur_shot) >= goal :
-                        if verdict : print("reached goal!")
+                        if verdict : print("Reached Goal!")
                         test_result[i] = np.array((n, True))
                         break
                 
@@ -129,7 +129,7 @@ class DQN() :
                 else :
                     cur_action = np.argmax(predict_Q)
                 #print(predict_Q)
-                if verdict : print("at map", test_stepQueue.getCurMap(cur_shot), "choose", cur_action, "with Q:", predict_Q[cur_action])
+                if verdict : print("Score:", test_stepQueue.getCurMap(cur_shot), "\nDo action", cur_action, "with Q:", predict_Q[cur_action], "\n")
                     
                 self.game.do_control(cur_action)
                 
@@ -139,14 +139,14 @@ class DQN() :
             
             if goal is not None :
                 if end_map >= goal and test_result[i, 0] == 0:
-                    if verdict : print("reached goal!")
+                    if verdict : print("Reached Goal!")
                     test_result[i] = np.array((max_step, True))
                 else :
                     test_result[i] = np.array((max_step, False))
             else :
                 test_result[i] = end_map
             
-            if verdict : print("test round ", i, " end\tat map: ", end_map)
+            if verdict : print("Test round", i, "ended. Score:", end_map, "\n")
         
             # Exit Game...
             self.game.quitgame()

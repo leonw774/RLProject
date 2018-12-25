@@ -78,7 +78,7 @@ class Setting() :
     test_intv = 5
     draw_fig_intv = 20
     
-    eps_test = 0.1
+    eps_test = 0.01
     steps_test = 100
     
     

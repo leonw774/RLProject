@@ -103,11 +103,11 @@ class GameAgent :
         # click "NEW GAME"
         while(1) : # sometimes the game is not responsive to keybroad, you have to try more times
             shot1 = np.array(screenshot(region = self.GAME_REGION).convert('RGB').resize(set.shot_resize))
-            click(self.GAME_REGION[0] + self.GAME_REGION[2] * 0.70, self.GAME_REGION[1] + self.GAME_REGION[3] * 0.40)
+            click(self.GAME_REGION[0] + self.GAME_REGION[2] * 0.70, self.GAME_REGION[1] + self.GAME_REGION[3] * 0.36)
             sleep(0.2)
             shot2 = np.array(screenshot(region = self.GAME_REGION).convert('RGB').resize(set.shot_resize))
             if np.sum(np.abs(shot1 - shot2)) > set.no_move_thrshld : break
-        sleep(8)
+        sleep(7.5)
     
     def quitgame(self) :
         sleep(1)
