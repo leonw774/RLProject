@@ -1,7 +1,7 @@
 import sys
 import numpy as np
 from PIL import Image
-from setting import TrainingSetting as set
+from setting import Setting as set
 
 class StepQueue() :
 

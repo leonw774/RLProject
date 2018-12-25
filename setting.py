@@ -4,8 +4,29 @@ from win32 import win32gui
 
 def sorting_filename_as_int(element) :
     return int(element[0 :- 4])
+    
+def get_game_region(title = None) :
+    if title :
+        gamewin = win32gui.FindWindow(None, title)
+        if not gamewin:
+            raise Exception('window title not found')
+        #get the bounding box of the window
+        x1, y1, x2, y2 = win32gui.GetWindowRect(gamewin)
+        
+        h_padding = (y2 - y1) * 0.1
+        w_padding = (x2 - x1) * 0.1
+        
+        y1 += h_padding # get rid of window bar
+        y2 -= h_padding
+        x1 += w_padding
+        x2 -= w_padding
+        
+        return (x1, y1, (x2 - x1 + 1), (y2 - y1 + 1))
+    else :
+        raise Exception("no window title was given.")
+# end get_game_region
 
-class TrainingSetting() :
+class Setting() :
     
     # SCREENSHOTS SETTING
     shot_w = 108
@@ -16,27 +37,6 @@ class TrainingSetting() :
     shot_intv_time = 0.01
     shot_wait_max = 100
     noise_range = 0.008
-    
-    def get_game_region(title = None) :
-        if title :
-            gamewin = win32gui.FindWindow(None, title)
-            if not gamewin:
-                raise Exception('window title not found')
-            #get the bounding box of the window
-            x1, y1, x2, y2 = win32gui.GetWindowRect(gamewin)
-            
-            h_padding = (y2 - y1) * 0.1
-            w_padding = (x2 - x1) * 0.1
-            
-            y1 += h_padding # get rid of window bar
-            y2 -= h_padding
-            x1 += w_padding
-            x2 -= w_padding
-            
-            return (x1, y1, (x2 - x1 + 1), (y2 - y1 + 1))
-        else :
-            raise Exception("no window title was given.")
-    # end get_game_region
 
     # Q NET SETTING
     model_input_shape = (shot_h, shot_w, shot_c)
@@ -68,10 +68,6 @@ class TrainingSetting() :
         
     check_stuck = True
     stuck_thrshld = 100
-    use_p_normalizeation = False
-    ignore_zero_r = False
-    ignore_zero_r_p = 0.99
-    ignore_zero_r_p_min = 0.5
     
     epoches = 300
     steps_epoch = 150

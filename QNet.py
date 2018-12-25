@@ -1,8 +1,8 @@
-from setting import TrainingSetting as set
+from setting import Setting as set
 from keras.models import Model
 from keras.layers import Activation, BatchNormalization, Concatenate, Conv2D, Conv3D, Dense, Dropout, Flatten, SimpleRNN, Input, MaxPooling2D, MaxPooling3D, LeakyReLU
 
-# Q-network: guess how many score it will make
+# Q-network: guess how many score a image will make
 def QNet(scrshot_size, action_size) :
     input_scrshots = Input(scrshot_size) # screen shot image
     x = Conv2D(32, (6, 6), padding = "valid", activation = "relu")(input_scrshots)
@@ -16,3 +16,5 @@ def QNet(scrshot_size, action_size) :
     model = Model(input_scrshots, scores)
     model.summary()
     return model
+    
+
