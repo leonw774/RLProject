@@ -8,26 +8,14 @@ from setting import Setting as set
 from stepqueue import StepQueue
 from qnet import QNet
 from gameagent import GameAgent
+from gamereward import MapReward, DiffReward
 
 class DQN() :
     
-    def __init__(self, use_weight_file = None, use_target_Q = False) :
+    def __init__(self) :
         
         self.game = GameAgent()
         self.model_optimizer = optimizers.rmsprop(lr = set.learning_rate, decay = set.learning_rate_decay)
-        
-        self.Q = QNet(set.model_input_shape, set.actions_num)
-        self.Q.summary()
-        self.Q.compile(loss = "mse", optimizer = self.model_optimizer, metrics = ['mse'])
-        
-        if use_weight_file :
-            self.Q.load_weights(use_weight_file)
-        
-        if use_target_Q :
-            self.Q_target = QNet(set.model_input_shape, set.actions_num)
-            self.Q_target.set_weights(self.Q.get_weights())
-        else :
-            self.Q_target = None
             
         self.A = []
         for i in range(set.actions_num) :
@@ -93,18 +81,21 @@ class DQN() :
         plt.savefig("fig/test_end_map.png")
         plt.close()
         
-    def test(self, model_weight_name, rounds = 1, max_step = set.steps_test, goal = None, verdict = False) :
-    
-        if verdict : print("test begin for:", model_weight_name)
+    def test(self, model_weight_name, epsilon = set.eps_test, rounds = 1, max_step = set.steps_test, goal = None, verdict = False) :
+
         testQ = load_model(model_weight_name)
+        if verdict : print("Test begin for:", model_weight_name)
         
         if goal is not None :
+            print("Goal:", goal)
             test_result = np.zeros((rounds, 2))
         else :
             test_result = np.zeros((rounds))
         
-        for i in range(rounds) :
+        print("Step Limit:", max_step)
         
+        for i in range(rounds) :
+            print("\nRound", i, "begin")
             # click "NEW GAME"
             self.game.newgame()
             test_stepQueue = StepQueue()
@@ -120,7 +111,7 @@ class DQN() :
                         break
                 
                 predict_Q = np.squeeze(testQ.predict(self.add_noise(cur_shot)))
-                if np.random.random() < set.eps_test :
+                if np.random.random() < epsilon :
                     # soft max
                     w = predict_Q
                     w = np.exp(w)
@@ -138,11 +129,13 @@ class DQN() :
             end_map = test_stepQueue.getCurMap(cur_shot)
             
             if goal is not None :
-                if end_map >= goal and test_result[i, 0] == 0:
-                    if verdict : print("Reached Goal!")
-                    test_result[i] = np.array((max_step, True))
-                else :
-                    test_result[i] = np.array((max_step, False))
+                if test_result[i, 0] == 0 :
+                    if end_map >= goal :
+                        if verdict : print("Reached Goal!")
+                        test_result[i] = np.array((max_step, True))
+                    else :
+                        print("Time out")
+                        test_result[i] = np.array((max_step, False))
             else :
                 test_result[i] = end_map
             
@@ -153,7 +146,7 @@ class DQN() :
         return test_result
     # end def test
     
-    def fit(self) :
+    def fit(self, load_weight_name = None, save_weight_name = "Q_model.h5", use_target_Q = False) :
         '''
         We will train Q, at time t, as:
             y_pred = Q([state_t, a_t])
@@ -162,7 +155,20 @@ class DQN() :
         after a number of steps, copy Q to Q_target.
         '''
         
+        Q = QNet(set.model_input_shape, set.actions_num)
+        Q.summary()
+        Q.compile(loss = "mse", optimizer = self.model_optimizer, metrics = ['mse'])
+        
+        if load_weight_name :
+            Q.load_weights(load_weight_name)
+        if use_target_Q :
+            Q_target = QNet(set.model_input_shape, set.actions_num)
+            Q_target.set_weights(self.Q.get_weights())
+        else :
+            Q_target = None
+        
         stepQueue = StepQueue()
+        mapReward = MapReward()
         loss_list = []
         endMap_list = []
         avgR_list = []
@@ -204,7 +210,7 @@ class DQN() :
                 self.game.do_control(cur_action)
                 
                 nxt_shot = self.game.get_screenshot(wait_no_move = True)
-                cur_reward = stepQueue.calReward(cur_shot, nxt_shot) # pre-action, after-action
+                cur_reward = mapReward.calReward(cur_shot, nxt_shot) # pre-action, after-action
                 avgR_list[e] += cur_reward / set.steps_epoch
                 #print(cur_action, ",", cur_reward)
                 
@@ -255,14 +261,14 @@ class DQN() :
             endMap_list.append(endMap)
             avgQ_list.append(avrgQ)
             
-            if self.Q_target != None and stepQueue.getLength() > set.train_thrshld :
+            if use_target_Q and stepQueue.getLength() > set.train_thrshld :
                 self.Q_target.set_weights(self.Q.get_weights())
-                self.Q_target.save("Q_model.h5")
+                self.Q_target.save(save_weight_name)
             else :
-                self.Q.save("Q_model.h5")
+                self.Q.save(save_weight_name)
                 
             if (e + 1) % set.test_intv == 0 :
-                test_endMap = self.test("Q_model.h5", verdict = False)[0]
+                test_endMap = self.test(save_weight_name, verdict = False)[0]
                 test_endMap_list.append(test_endMap);
                 print("test: ", test_endMap)
             
@@ -277,21 +283,16 @@ class DQN() :
     def random_action(self, steps = None) :
         # click "NEW GAME"
         self.game.newgame()
-        random_stepQueue = StepQueue()
+        mapReward = DiffReward()
         if steps == None : steps = set.steps_test
         for n in range(steps) :
-            cur_shot = self.game.get_screenshot(savefile = ("output/" + str(n) + ".png"))
-            cur_action = random.randrange(set.actions_num)
+            cur_shot = self.game.get_screenshot()
+            cur_action = np.random.randint(set.actions_num)
             self.game.do_control(cur_action)
             nxt_shot = self.game.get_screenshot()
-            cur_reward = random_stepQueue.calReward(cur_shot, nxt_shot)
+            cur_reward = mapReward.calReward(cur_shot, nxt_shot)
             print(cur_action, ",", cur_reward)
-            if cur_reward == "stuck" :
-                print("at step", n)
-                screenshot(region = self.GameRegion).save("stuck_at_random.png")
-                break
         
-        del random_stepQueue
         print("test end, of reward: %.2f", cur_reward)
         # Exit Game...
         self.game.quitgame()

@@ -1,16 +1,15 @@
 import sys
 import dqn
 
-#print("how many episodes this test will ran:")
-c = 5 #int(input())
+round_num = 30 #int(input())
 t = dqn.DQN()
-#t.random_action()
 
 #model_name = sys.argv[1] if len(sys.argv) == 2 else "Q_model.h5"
 
 # USE TRACKPAD TUNING
 ######## GOAL 35 ########
-r = t.test("Q_model-12-15.h5", rounds = c, goal = 11, verdict = True)
+r = t.test("Q_model-12-15.h5", epsilon = 0.1, rounds = round_num, max_step = 50, goal = 34, verdict = True)
+
 '''
 resultfile = open("test_result.csv", 'w')
 if (r.shape == c) :

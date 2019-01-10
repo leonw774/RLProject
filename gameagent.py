@@ -41,18 +41,15 @@ class GameAgent :
     def do_control(self, id) :
         
         intv_time = 0.001
-        
+         # is straight
         if id < set.mouse_straight_angles * 2 :
-            # is straight
-            slow_distance = 2400 # pixels
-            fast_distance = 4000 # pixels
-            slow_delta = 3 # pixels
-            fast_delta = 20
         
             if id < set.mouse_straight_angles :
-                delta, distance = slow_delta, slow_distance
+                # slow
+                delta, distance = 3, 2400
             else :
-                delta, distance = fast_delta, fast_distance
+                # fast
+                delta, distance = 20, 4000
             
             angle = 2 * math.pi * id / set.mouse_straight_angles
             d_x = math.ceil(math.cos(angle) * delta)
@@ -63,8 +60,8 @@ class GameAgent :
                 sleep(intv_time)
             if id >= set.mouse_straight_angles :
                 sleep(0.02)
+        # is round
         else :
-            # is round
             id -= set.mouse_straight_angles * 2
             
             if id < set.mouse_round_angles * 2 :
@@ -73,22 +70,21 @@ class GameAgent :
                 is_clockwise = -1
                 id -= set.mouse_round_angles * 2
             
-            if id < set.mouse_round_angles : # slow
-                radius = 560
-                delta = 4
-                proportion = 0.8
-            else : # fast
-                radius = 720
-                delta = 20
-                proportion = 0.7
+            if id < set.mouse_round_angles :
+                # slow
+                radius, delta, proportion = 560, 4, 0.8
+            else :
+                # fast
+                radius, delta, proportion = 720, 20, 0.7
             
-            angles_divide = 36.0
+            angles_num = 36.0
             angle_bias = 4.0
-            angle_offset = id / set.mouse_round_angles + angle_bias / angles_divide
-            edge_leng = int(2 * (radius**2) * (1 - math.cos(1.0 / angles_divide))) 
+            angle_offset = (id / set.mouse_round_angles) + angle_bias / angles_num
+            edge_leng = math.floor(2 * radius * math.sin(math.pi / angles_num))
+            # a isosceles triangle with legs = r and apex = a has base = 2r * sin(a/2)
             
-            for i in range(int(angles_divide * proportion)) : 
-                angle = 2 * math.pi * (i * is_clockwise / angles_divide + angle_offset)
+            for i in range(int(angles_num * proportion)) : 
+                angle = 2 * math.pi * (i * is_clockwise / angles_num + angle_offset)
                 d_x = math.ceil(math.cos(angle) * delta)
                 d_y = math.ceil(math.sin(angle) * delta)
                 for j in range(edge_leng // delta) :
@@ -103,11 +99,12 @@ class GameAgent :
         # click "NEW GAME"
         while(1) : # sometimes the game is not responsive to keybroad, you have to try more times
             shot1 = np.array(screenshot(region = self.GAME_REGION).convert('RGB').resize(set.shot_resize))
-            click(self.GAME_REGION[0] + self.GAME_REGION[2] * 0.70, self.GAME_REGION[1] + self.GAME_REGION[3] * 0.36)
+            click(self.GAME_REGION[0] + self.GAME_REGION[2] * 0.70, self.GAME_REGION[1] + self.GAME_REGION[3] * 0.35)
             sleep(0.2)
             shot2 = np.array(screenshot(region = self.GAME_REGION).convert('RGB').resize(set.shot_resize))
             if np.sum(np.abs(shot1 - shot2)) > set.no_move_thrshld : break
-        sleep(7.5)
+            sleep(0.3)
+        sleep(7)
     
     def quitgame(self) :
         sleep(1)
@@ -120,5 +117,5 @@ class GameAgent :
             if np.sum(np.abs(shot1 - shot2)) > set.no_move_thrshld : break
         # click "QUIT"
         click(self.GAME_REGION[0] + self.GAME_REGION[2] * 0.15, self.GAME_REGION[1] + self.GAME_REGION[3] * 1.05)
-        sleep(10)
-    
+        sleep(12)
+# end class GameAgent

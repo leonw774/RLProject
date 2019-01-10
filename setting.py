@@ -13,10 +13,12 @@ def get_game_region(title = None) :
         #get the bounding box of the window
         x1, y1, x2, y2 = win32gui.GetWindowRect(gamewin)
         
+        y1 += 30 # get rid of window bar
+        
         h_padding = (y2 - y1) * 0.1
         w_padding = (x2 - x1) * 0.1
         
-        y1 += h_padding # get rid of window bar
+        y1 += h_padding
         y2 -= h_padding
         x1 += w_padding
         x2 -= w_padding
@@ -45,9 +47,9 @@ class Setting() :
     
     # REWARD SETTING
     mapname_list = sorted(os.listdir("map/"), key = sorting_filename_as_int)
-    no_move_thrshld = shot_h * shot_w * shot_c * 0.03 * ((shot_c - 1) * 0.01 + 1)
+    no_move_thrshld = shot_h * shot_w * shot_c * 0.04 * ((shot_c - 1) * 0.01 + 1)
     gamma = 0.5
-    total_r = len(mapname_list)
+    base = 1.0
 
     # ACTION SETTIN
     mouse_straight_angles = 12
@@ -61,7 +63,7 @@ class Setting() :
     stepQueue_length_max = 10000 # set 0 to be no limit
 
     # TRAINING SETTING
-    use_target_Q = True
+    use_target_Q = False
     epsilon = 1.0
     eps_min = 0.1
     eps_decay = 0.98
@@ -69,8 +71,8 @@ class Setting() :
     check_stuck = True
     stuck_thrshld = 100
     
-    epoches = 300
-    steps_epoch = 150
+    epoches = 100
+    steps_epoch = 200
     train_thrshld = 80
     steps_train = 4
     train_size = 48
@@ -78,7 +80,7 @@ class Setting() :
     test_intv = 5
     draw_fig_intv = 20
     
-    eps_test = 0.01
+    eps_test = 0.1
     steps_test = 100
     
     
