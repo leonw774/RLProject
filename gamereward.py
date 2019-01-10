@@ -15,7 +15,7 @@ class MapReward :
             self.mapList.append(array_map)
         
         self.base_score = base_reward
-        self.decline_rate = (1 / set.gamma) ** (1 / len(self.mapList))
+        self.rev_gamma = (1 / set.gamma) ** (1 / len(self.mapList))
         # so that the reward of last map, after times gamma, is exactly equal to total_r
         
         #print("no_move: ", set.no_move_thrshld)
@@ -43,18 +43,12 @@ class MapReward :
                 min_cur_diff = d
                 if this_mapnum > cur_map : cur_map = this_mapnum
         
-        #print(pre_map, "with", min_pre_diff, "to", cur_map, "with", min_cur_diff)
-        
-        #if min_cur_diff >= set.no_move_thrshld * 3 :
-            # not in the map!?
-        #    return 0.0
-        
         if pre_map == cur_map :
             return 0
         else :
-            # r = base * m * (d ^ m)
-            pre_score = self.base_score * pre_map * (self.decline_rate ** pre_map)
-            cur_score = self.base_score * cur_map * (self.decline_rate ** pre_map)
+            # r = base * m * (rg ^ m)
+            pre_score = self.base_score * pre_map * (self.rev_gamma ** pre_map)
+            cur_score = self.base_score * cur_map * (self.rev_gamma ** pre_map)
             return cur_score - pre_score
     # end def calReward 
     

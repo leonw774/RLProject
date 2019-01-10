@@ -77,14 +77,16 @@ class GameAgent :
                 # fast
                 radius, delta, proportion = 720, 20, 0.7
             
-            angles_num = 36.0
+            angle_num = 36.0
             angle_bias = 4.0
-            angle_offset = (id / set.mouse_round_angles) + angle_bias / angles_num
-            edge_leng = math.floor(2 * radius * math.sin(math.pi / angles_num))
-            # a isosceles triangle with legs = r and apex = a has base = 2r * sin(a/2)
+            angle_offset = (id / set.mouse_round_angles) + angle_bias / angle_num
+            edge_leng = math.floor(2 * radius * math.sin(math.pi / angle_num))
+            # we cut a circle's edge into circular arcs.
+            # each arcs is similar to the base of an isosceles triangle
+            # an isosceles triangle with legs = r and apex = a has base = 2r * sin(a/2)
             
-            for i in range(int(angles_num * proportion)) : 
-                angle = 2 * math.pi * (i * is_clockwise / angles_num + angle_offset)
+            for i in range(int(angle_num * proportion)) : 
+                angle = 2 * math.pi * (i * is_clockwise / angle_num + angle_offset)
                 d_x = math.ceil(math.cos(angle) * delta)
                 d_y = math.ceil(math.sin(angle) * delta)
                 for j in range(edge_leng // delta) :
