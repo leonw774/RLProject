@@ -46,10 +46,12 @@ class Setting() :
     learning_rate_decay = 1e-4
     
     # REWARD SETTING
+    use_mapreward = False
     mapname_list = sorted(os.listdir("map/"), key = sorting_filename_as_int)
     no_move_thrshld = shot_h * shot_w * shot_c * 0.04 * ((shot_c - 1) * 0.01 + 1)
     gamma = 0.5
     base = 1.0
+    
 
     # ACTION SETTIN
     mouse_straight_angles = 12

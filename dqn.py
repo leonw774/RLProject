@@ -163,12 +163,13 @@ class DQN() :
             Q.load_weights(load_weight_name)
         if use_target_Q :
             Q_target = QNet(set.model_input_shape, set.actions_num)
-            Q_target.set_weights(self.Q.get_weights())
+            Q_target.set_weights(Q.get_weights())
         else :
             Q_target = None
         
         stepQueue = StepQueue()
-        mapReward = MapReward()
+        if set.use_mapreward : rewardFunc = MapReward()
+        else : rewardFunc = DiffReward()
         loss_list = []
         endMap_list = []
         avgR_list = []
@@ -200,7 +201,7 @@ class DQN() :
                 cur_shot = nxt_shot
 
                 # make action
-                predQ = np.squeeze(self.Q.predict(self.add_noise(cur_shot)))
+                predQ = np.squeeze(Q.predict(self.add_noise(cur_shot)))
                 avgQ_list[e] += np.max(predQ) / set.steps_epoch
                 if np.random.random() < this_epoch_eps :
                     cur_action = np.random.randint(set.actions_num)
@@ -210,7 +211,7 @@ class DQN() :
                 self.game.do_control(cur_action)
                 
                 nxt_shot = self.game.get_screenshot(wait_no_move = True)
-                cur_reward = mapReward.calReward(cur_shot, nxt_shot) # pre-action, after-action
+                cur_reward = rewardFunc.calReward(cur_shot, nxt_shot) # pre-action, after-action
                 avgR_list[e] += cur_reward / set.steps_epoch
                 #print(cur_action, ",", cur_reward)
                 
@@ -235,23 +236,24 @@ class DQN() :
                     # make next predicted reward array and train input array at same time
                     new_r = np.zeros((set.train_size, set.actions_num))
                     for j in range(set.train_size) :
-                        if self.Q_target == None :
-                            new_r[j] = self.Q.predict(np.expand_dims(trn_s[j], axis = 0))
-                            predict_Q = self.Q.predict(np.expand_dims(trn_s[j+1], axis = 0))
+                        if use_target_Q :
+                            new_r[j] = Q_target.predict(np.expand_dims(trn_s[j], axis = 0))
+                            predict_Q = Q_target.predict(np.expand_dims(trn_s[j+1], axis = 0))
                         else :
-                            new_r[j] = self.Q_target.predict(np.expand_dims(trn_s[j], axis = 0))
-                            predict_Q = self.Q_target.predict(np.expand_dims(trn_s[j+1], axis = 0))
+                            new_r[j] = Q.predict(np.expand_dims(trn_s[j], axis = 0))
+                            predict_Q = Q.predict(np.expand_dims(trn_s[j+1], axis = 0))
                         new_r[j, trn_a[j]] = trn_r[j] + np.max(predict_Q) * set.gamma
                         # Q_new = r + Q_predict(a,s) * gamma
                     
                     #print("new_r\n", new_r[0])
                     
-                    loss_list[e] += self.Q.train_on_batch(trn_s[:set.train_size], new_r)[0] / set.steps_epoch * set.steps_train
+                    loss_list[e] += Q.train_on_batch(trn_s[:set.train_size], new_r)[0] / set.steps_epoch * set.steps_train
                     
             # end for(STEP_PER_EPOCH)
             self.game.quitgame()
             
-            endMap = stepQueue.getCurMap(cur_shot)
+            if use_mapreward : endMap = rewardFunc.getCurMap(cur_shot)
+            else : endMap = 0
             
             # write log file and log list
             print("\tend at map %d\tloss: %.4f  avrgQ: %.3f avrgR: %.3f" % (endMap, loss, avrgQ, avrgR))
@@ -262,10 +264,10 @@ class DQN() :
             avgQ_list.append(avrgQ)
             
             if use_target_Q and stepQueue.getLength() > set.train_thrshld :
-                self.Q_target.set_weights(self.Q.get_weights())
-                self.Q_target.save(save_weight_name)
+                Q_target.set_weights(Q.get_weights())
+                Q_target.save(save_weight_name)
             else :
-                self.Q.save(save_weight_name)
+                Q.save(save_weight_name)
                 
             if (e + 1) % set.test_intv == 0 :
                 test_endMap = self.test(save_weight_name, verdict = False)[0]
@@ -283,14 +285,14 @@ class DQN() :
     def random_action(self, steps = None) :
         # click "NEW GAME"
         self.game.newgame()
-        mapReward = DiffReward()
+        rewardFunc = DiffReward()
         if steps == None : steps = set.steps_test
         for n in range(steps) :
             cur_shot = self.game.get_screenshot()
             cur_action = np.random.randint(set.actions_num)
             self.game.do_control(cur_action)
             nxt_shot = self.game.get_screenshot()
-            cur_reward = mapReward.calReward(cur_shot, nxt_shot)
+            cur_reward = rewardFunc.calReward(cur_shot, nxt_shot)
             print(cur_action, ",", cur_reward)
         
         print("test end, of reward: %.2f", cur_reward)

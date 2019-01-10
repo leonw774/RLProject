@@ -58,16 +58,6 @@ class StepQueue() :
     
     def getActionsOccurrence(self) :
         return self.actionsOccurrence
-        
-    def getCurMap(self, scrshot) :
-        min_diff = 2147483648
-        cur_map = -1
-        for this_mapnum, this_mapshot in enumerate(self.mapList) :
-            d = np.sum(np.absolute(this_mapshot - scrshot))
-            if d <= min_diff :
-                min_diff = d
-                if this_mapnum > cur_map : cur_map = this_mapnum
-        return cur_map
     
     
         

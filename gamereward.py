@@ -56,14 +56,24 @@ class MapReward :
             pre_score = self.base_score * pre_map * (self.incline_rate ** pre_map)
             cur_score = self.base_score * cur_map * (self.incline_rate ** pre_map)
             return cur_score - pre_score
-        
-    # end def calReward
+    # end def calReward 
+    
+    def getCurMap(self, scrshot) :
+        min_diff = 2147483648
+        cur_map = -1
+        for this_mapnum, this_mapshot in enumerate(self.mapList) :
+            d = np.sum(np.absolute(this_mapshot - scrshot))
+            if d <= min_diff :
+                min_diff = d
+                if this_mapnum > cur_map : cur_map = this_mapnum
+        return cur_map
+    # end def getCurMap
 # end class MapReward
  
 class DiffReward :
-    def __init__(self, base_reward = 2.0, incline_rate = 0.9) :
+    def __init__(self, base_score = 2.0, incline_rate = 0.9) :
         self.memoryList = []
-        self.base_score = base_reward
+        self.base_score = base_score
         self.incline_rate = incline_rate
         self.thresold = set.no_move_thrshld
     
@@ -84,10 +94,8 @@ class DiffReward :
                 if this_num > min_diff_pos :
                     min_diff_pos = this_num
         
-        print(min_diff_pos, "/", len(self.memoryList))
-        
         if (min_diff >= self.thresold * 2) :
-            return base_reward
+            return self.base_score
         elif (min_diff >= self.thresold) :
             self.memoryList.append(cur_scrshot)
             score = self.base_score * (self.incline_rate ** (len(self.memoryList) - min_diff_pos))
