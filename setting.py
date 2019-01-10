@@ -48,8 +48,8 @@ class Setting() :
     # REWARD SETTING
     use_mapreward = False
     mapname_list = sorted(os.listdir("map/"), key = sorting_filename_as_int)
-    no_move_thrshld = shot_h * shot_w * shot_c * 0.04 * ((shot_c - 1) * 0.01 + 1)
-    gamma = 0.5
+    no_move_thrshld = shot_h * shot_w * shot_c * 0.05 * ((shot_c - 1) * 0.01 + 1)
+    gamma = 0.25
     base = 1.0
     
 
@@ -75,7 +75,7 @@ class Setting() :
     
     epoches = 100
     steps_epoch = 200
-    train_thrshld = 80
+    train_thrshld = 100
     steps_train = 4
     train_size = 48
     

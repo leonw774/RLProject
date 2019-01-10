@@ -71,10 +71,9 @@ class MapReward :
 # end class MapReward
  
 class DiffReward :
-    def __init__(self, base_score = 2.0, decline_rate = 0.9) :
+    def __init__(self, base_score = 1.0) :
         self.memoryList = []
         self.base_score = base_score
-        self.decline_rate = decline_rate
         self.thresold = set.no_move_thrshld
     
     def calReward(self, pre_scrshot, cur_scrshot) :
@@ -94,14 +93,11 @@ class DiffReward :
                 if this_num > min_diff_pos :
                     min_diff_pos = this_num
         
-        if (min_diff >= self.thresold * ) :
-            return self.base_score
-        elif (min_diff >= self.thresold) :
+        if (min_diff > self.thresold) :
             self.memoryList.append(cur_scrshot)
-            score = self.base_score * (self.decline_rate ** (len(self.memoryList) - min_diff_pos))
-            return score if score > 0.01 else 0
+            return self.base_score
         else :
-            return 0
+            return -self.base_score * ((len(self.memoryList) - min_diff_pos - 1) / (len(self.memoryList)) - 1)
         
     # end def calReward
 # end class MapReward

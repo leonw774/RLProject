@@ -99,13 +99,14 @@ class DQN() :
             # click "NEW GAME"
             self.game.newgame()
             test_stepQueue = StepQueue()
+            test_rewardFunc = MapReward()
             cur_shot = self.game.get_screenshot(wait_no_move = True) 
             
             for n in range(max_step) :
                 cur_shot = self.game.get_screenshot()
                 
                 if goal is not None :
-                    if test_stepQueue.getCurMap(cur_shot) >= goal :
+                    if test_rewardFunc.getCurMap(cur_shot) >= goal :
                         if verdict : print("Reached Goal!")
                         test_result[i] = np.array((n, True))
                         break
@@ -120,13 +121,13 @@ class DQN() :
                 else :
                     cur_action = np.argmax(predict_Q)
                 #print(predict_Q)
-                if verdict : print("Score:", test_stepQueue.getCurMap(cur_shot), "\nDo action", cur_action, "with Q:", predict_Q[cur_action], "\n")
+                if verdict : print("Score:", test_rewardFunc.getCurMap(cur_shot), "\nDo action", cur_action, "with Q:", predict_Q[cur_action], "\n")
                     
                 self.game.do_control(cur_action)
                 
             # end for step_test
             
-            end_map = test_stepQueue.getCurMap(cur_shot)
+            end_map = test_rewardFunc.getCurMap(cur_shot)
             
             if goal is not None :
                 if test_result[i, 0] == 0 :
@@ -159,7 +160,7 @@ class DQN() :
         Q.summary()
         Q.compile(loss = "mse", optimizer = self.model_optimizer, metrics = ['mse'])
         
-        if load_weight_name :
+        if load_weight_name != None :
             Q.load_weights(load_weight_name)
         if use_target_Q :
             Q_target = QNet(set.model_input_shape, set.actions_num)
@@ -212,6 +213,7 @@ class DQN() :
                 
                 nxt_shot = self.game.get_screenshot(wait_no_move = True)
                 cur_reward = rewardFunc.calReward(cur_shot, nxt_shot) # pre-action, after-action
+                stepQueue.addStep(cur_shot, cur_action, cur_reward)
                 avgR_list[e] += cur_reward / set.steps_epoch
                 #print(cur_action, ",", cur_reward)
                 
@@ -222,15 +224,15 @@ class DQN() :
                     elif stuck_count > 0 :
                         stuck_count -= 1
                     if stuck_count > set.stuck_thrshld :
-                        loss *= (float(set.steps_epoch) / float(n))
-                        avrgR *= (float(set.steps_epoch) / float(n))
+                        loss_list[e] *= (float(set.steps_epoch) / float(n))
+                        avgR_list[e] *= (float(set.steps_epoch) / float(n))
                         sys.stdout.write(str(n))
                         sys.stdout.flush()
                         break
                 
                 if stepQueue.getLength() > set.train_thrshld and n % set.steps_train == 0 :
                     # Experience Replay
-                    random_step = random.randint(stepQueue.getLength() - (set.train_size + 1))
+                    random_step = np.random.randint(stepQueue.getLength() - (set.train_size + 1))
                     trn_s, trn_a, trn_r = stepQueue.getStepsAsArray(random_step, set.train_size + 1)
                     
                     # make next predicted reward array and train input array at same time
@@ -252,16 +254,14 @@ class DQN() :
             # end for(STEP_PER_EPOCH)
             self.game.quitgame()
             
-            if use_mapreward : endMap = rewardFunc.getCurMap(cur_shot)
+            if set.use_mapreward : endMap = rewardFunc.getCurMap(cur_shot)
             else : endMap = 0
             
             # write log file and log list
-            print("\tend at map %d\tloss: %.4f  avrgQ: %.3f avrgR: %.3f" % (endMap, loss, avrgQ, avrgR))
-            log_string = ','.join([str(e), str(loss_list[e]), str(endMap), str(avrgR_list[e]), str(avrgQ_list[e])])
+            print("\tend at map %d\tloss: %.4f  avrgQ: %.3f avrgR: %.3f" % (endMap, loss_list[e], avgQ_list[e], avgR_list[e]))
+            log_string = ','.join([str(e), str(loss_list[e]), str(endMap), str(avgR_list[e]), str(avgQ_list[e])])
             logfile.write(log_string + "\n")
-            loss_list.append(loss)
             endMap_list.append(endMap)
-            avgQ_list.append(avrgQ)
             
             if use_target_Q and stepQueue.getLength() > set.train_thrshld :
                 Q_target.set_weights(Q.get_weights())
