@@ -15,12 +15,12 @@ class MapReward :
             self.mapList.append(array_map)
         
         self.base_score = base_reward
-        self.incline_rate = (1 / set.gamma) ** (1 / len(self.mapList))
+        self.decline_rate = (1 / set.gamma) ** (1 / len(self.mapList))
         # so that the reward of last map, after times gamma, is exactly equal to total_r
         
         #print("no_move: ", set.no_move_thrshld)
         #print("base_score:", self.base_score)
-        #print("incline_rate:", self.incline_rate)
+        #print("decline_rate:", self.decline_rate)
     
     def calReward(self, pre_scrshot, cur_scrshot) :
         pre_scrshot = np.squeeze(pre_scrshot) # before action
@@ -52,9 +52,9 @@ class MapReward :
         if pre_map == cur_map :
             return 0
         else :
-            # r = base * m * (i ^ m)
-            pre_score = self.base_score * pre_map * (self.incline_rate ** pre_map)
-            cur_score = self.base_score * cur_map * (self.incline_rate ** pre_map)
+            # r = base * m * (d ^ m)
+            pre_score = self.base_score * pre_map * (self.decline_rate ** pre_map)
+            cur_score = self.base_score * cur_map * (self.decline_rate ** pre_map)
             return cur_score - pre_score
     # end def calReward 
     
@@ -71,10 +71,10 @@ class MapReward :
 # end class MapReward
  
 class DiffReward :
-    def __init__(self, base_score = 2.0, incline_rate = 0.9) :
+    def __init__(self, base_score = 2.0, decline_rate = 0.9) :
         self.memoryList = []
         self.base_score = base_score
-        self.incline_rate = incline_rate
+        self.decline_rate = decline_rate
         self.thresold = set.no_move_thrshld
     
     def calReward(self, pre_scrshot, cur_scrshot) :
@@ -94,11 +94,11 @@ class DiffReward :
                 if this_num > min_diff_pos :
                     min_diff_pos = this_num
         
-        if (min_diff >= self.thresold * 2) :
+        if (min_diff >= self.thresold * ) :
             return self.base_score
         elif (min_diff >= self.thresold) :
             self.memoryList.append(cur_scrshot)
-            score = self.base_score * (self.incline_rate ** (len(self.memoryList) - min_diff_pos))
+            score = self.base_score * (self.decline_rate ** (len(self.memoryList) - min_diff_pos))
             return score if score > 0.01 else 0
         else :
             return 0
