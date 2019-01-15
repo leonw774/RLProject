@@ -39,7 +39,6 @@ class DQN() :
     
         plt.figure(figsize = (12, 8))
         plt.xlabel("epoch")
-        plt.ylim(0, 0.5)
         plt.plot(loss, label = "loss")
         plt.legend(loc = "upper right")
         plt.savefig("fig/loss.png")
@@ -84,18 +83,17 @@ class DQN() :
     def test(self, model_weight_name, epsilon = set.eps_test, rounds = 1, max_step = set.steps_test, goal = None, verdict = False) :
 
         testQ = load_model(model_weight_name)
-        if verdict : print("Test begin for:", model_weight_name)
+        if verdict :
+            print("Test begin for:", model_weight_name, "Step Limit:", max_step)    
         
         if goal is not None :
-            print("Goal:", goal)
+            if verdict : print("Goal:", goal)
             test_result = np.zeros((rounds, 2))
         else :
             test_result = np.zeros((rounds))
         
-        print("Step Limit:", max_step)
-        
         for i in range(rounds) :
-            print("\nRound", i, "begin")
+            if verdict : print("\nRound", i, "begin")
             # click "NEW GAME"
             self.game.newgame()
             test_stepQueue = StepQueue()
@@ -180,7 +178,7 @@ class DQN() :
         logfile = open("log.csv", 'w')
         logfile.write("epoch, loss, endMap, avrgR, avrgQ\n")
         
-        for e in range(set.epoches) :
+        for e in range(set.episodes) :
             
             self.game.newgame()
             sys.stdout.write(str(e) + ":")
@@ -194,8 +192,8 @@ class DQN() :
             loss_list.append(0)
             stuck_count = 0
 
-            for n in range(set.steps_epoch) :
-                if (n + 1) % (set.steps_epoch / 10) == 0 :
+            for n in range(set.steps_episode) :
+                if (n + 1) % (set.steps_episode / 10) == 0 :
                     sys.stdout.write(".")
                     sys.stdout.flush()
                 
@@ -203,7 +201,7 @@ class DQN() :
 
                 # make action
                 predQ = np.squeeze(Q.predict(self.add_noise(cur_shot)))
-                avgQ_list[e] += np.max(predQ) / set.steps_epoch
+                avgQ_list[e] += np.max(predQ) / set.steps_episode
                 if np.random.random() < this_epoch_eps :
                     cur_action = np.random.randint(set.actions_num)
                 else :
@@ -214,7 +212,7 @@ class DQN() :
                 nxt_shot = self.game.get_screenshot(wait_no_move = True)
                 cur_reward = rewardFunc.calReward(cur_shot, nxt_shot) # pre-action, after-action
                 stepQueue.addStep(cur_shot, cur_action, cur_reward)
-                avgR_list[e] += cur_reward / set.steps_epoch
+                avgR_list[e] += cur_reward / set.steps_episode
                 #print(cur_action, ",", cur_reward)
                 
                 # check if stuck
@@ -224,8 +222,8 @@ class DQN() :
                     elif stuck_count > 0 :
                         stuck_count -= 1
                     if stuck_count > set.stuck_thrshld :
-                        loss_list[e] *= (float(set.steps_epoch) / float(n))
-                        avgR_list[e] *= (float(set.steps_epoch) / float(n))
+                        loss_list[e] *= (float(set.steps_episode) / float(n))
+                        avgR_list[e] *= (float(set.steps_episode) / float(n))
                         sys.stdout.write(str(n))
                         sys.stdout.flush()
                         break
@@ -249,19 +247,24 @@ class DQN() :
                     
                     #print("new_r\n", new_r[0])
                     
-                    loss_list[e] += Q.train_on_batch(trn_s[:set.train_size], new_r)[0] / set.steps_epoch * set.steps_train
+                    loss_list[e] += Q.train_on_batch(trn_s[:set.train_size], new_r)[0] / set.steps_episode * set.steps_train
                     
             # end for(STEP_PER_EPOCH)
             self.game.quitgame()
             
-            if set.use_mapreward : endMap = rewardFunc.getCurMap(cur_shot)
-            else : endMap = 0
-            
             # write log file and log list
-            print("\tend at map %d\tloss: %.4f  avrgQ: %.3f avrgR: %.3f" % (endMap, loss_list[e], avgQ_list[e], avgR_list[e]))
-            log_string = ','.join([str(e), str(loss_list[e]), str(endMap), str(avgR_list[e]), str(avgQ_list[e])])
-            logfile.write(log_string + "\n")
-            endMap_list.append(endMap)
+            if set.use_mapreward :
+                endMap = rewardFunc.getCurMap(cur_shot)
+                print("\tend at map %d\tloss: %.4f  avrgQ: %.3f avrgR: %.3f" % (endMap, loss_list[e], avgQ_list[e], avgR_list[e]))
+                log_string = ','.join([str(e), str(loss_list[e]), str(endMap), str(avgR_list[e]), str(avgQ_list[e])])
+                logfile.write(log_string + "\n")
+                endMap_list.append(endMap)
+            else :
+                print("\tloss: %.4f  avrgQ: %.3f avrgR: %.3f" % (loss_list[e], avgQ_list[e], avgR_list[e]))
+                log_string = ','.join([str(e), str(loss_list[e]), "None", str(avgR_list[e]), str(avgQ_list[e])])
+                logfile.write(log_string + "\n")
+                # DiffReward has to clear memory
+                rewardFunc.clear()
             
             if use_target_Q and stepQueue.getLength() > set.train_thrshld :
                 Q_target.set_weights(Q.get_weights())
@@ -277,7 +280,7 @@ class DQN() :
             if (e + 1) % set.draw_fig_intv == 0 :
                 self.draw_fig(loss_list, avgR_list, avgQ_list, endMap_list, test_endMap_list)
             
-        # end for(epoches)
+        # end for(episodes)
         self.draw_fig(loss_list, avgR_list, avgQ_list, endMap_list, test_endMap_list)
         
     # end def fit

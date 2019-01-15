@@ -72,15 +72,15 @@ class GameAgent :
             
             if id < set.mouse_round_angles :
                 # slow
-                radius, delta, proportion = 560, 4, 0.8
+                radius, delta, proportion = 1200, 4, 0.8
             else :
                 # fast
-                radius, delta, proportion = 720, 20, 0.7
+                radius, delta, proportion = 1500, 18, 0.7
             
             angles_num = 36.0
             angle_bias = 4.0
             angle_offset = (id / set.mouse_round_angles) + angle_bias / angles_num
-            edge_leng = math.floor(2 * radius * math.sin(math.pi / angles_num))
+            edge_leng = math.ceil(2 * radius * math.sin(math.pi / angles_num))
             # a isosceles triangle with legs = r and apex = a has base = 2r * sin(a/2)
             
             for i in range(int(angles_num * proportion)) : 

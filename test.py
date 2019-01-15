@@ -8,7 +8,7 @@ t = dqn.DQN()
 
 # USE TRACKPAD TUNING
 ######## GOAL 35 ########
-r = t.test("Q_model-12-15.h5", epsilon = 0.1, rounds = round_num, max_step = 50, goal = 34, verdict = True)
+r = t.test("Q_model.h5", epsilon = 0.1, rounds = round_num, max_step = 100, goal = 34, verdict = False)
 
 '''
 resultfile = open("test_result.csv", 'w')

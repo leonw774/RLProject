@@ -3,7 +3,7 @@ from PIL import Image
 from setting import Setting as set
 
 class MapReward :
-    def __init__(self, base_reward = 1.0) :
+    def __init__(self, base_reward = set.base_reward) :
         self.mapList = []
         for filename in set.mapname_list :
             if set.shot_c == 1 :
@@ -71,10 +71,13 @@ class MapReward :
 # end class MapReward
  
 class DiffReward :
-    def __init__(self, base_score = 1.0) :
+    def __init__(self, base_score = set.base_reward) :
         self.memoryList = []
         self.base_score = base_score
         self.thresold = set.no_move_thrshld
+    
+    def clear(self) :
+        self.memoryList = []
     
     def calReward(self, pre_scrshot, cur_scrshot) :
         pre_scrshot = np.squeeze(pre_scrshot) # before action
@@ -97,7 +100,7 @@ class DiffReward :
             self.memoryList.append(cur_scrshot)
             return self.base_score
         else :
-            return -self.base_score * ((len(self.memoryList) - min_diff_pos - 1) / (len(self.memoryList)) - 1)
+            return -self.base_score * (len(self.memoryList) - min_diff_pos - 1) * set.gamma #/ len(self.memoryList)
         
     # end def calReward
 # end class MapReward

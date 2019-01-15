@@ -42,42 +42,42 @@ class Setting() :
 
     # Q NET SETTING
     model_input_shape = (shot_h, shot_w, shot_c)
-    learning_rate = 0.0005
+    learning_rate = 0.00025
     learning_rate_decay = 1e-4
     
     # REWARD SETTING
     use_mapreward = False
     mapname_list = sorted(os.listdir("map/"), key = sorting_filename_as_int)
-    no_move_thrshld = shot_h * shot_w * shot_c * 0.05 * ((shot_c - 1) * 0.01 + 1)
-    gamma = 0.25
-    base = 1.0
+    no_move_thrshld = shot_h * shot_w * shot_c * 0.06 * ((shot_c - 1) * 0.01 + 1)
+    gamma = 0.5
+    base_reward = 1.0
     
 
     # ACTION SETTIN
     mouse_straight_angles = 12
-    mouse_round_angles = 6
-    actions_num = (mouse_straight_angles + mouse_round_angles) * 2
+    mouse_round_angles = 4
+    actions_num = (mouse_straight_angles * 2) + (mouse_round_angles * 2)
     # ROUND ACTION ONLY HAS CLOCKWISE BECAUSE COUNTER-CLOCKWISE IS USELESS
     # {slow straight(12), fast straight(12), cwise round slow / fast(12), ccwise round slow / fast(12)}
     do_control_pause = 0.03
 
     # STEP QUEUE SETTING
-    stepQueue_length_max = 10000 # set 0 to be no limit
+    stepQueue_length_max = 2000 # set 0 to be no limit
 
     # TRAINING SETTING
     use_target_Q = False
     epsilon = 1.0
     eps_min = 0.1
-    eps_decay = 0.98
+    eps_decay = 0.975
         
     check_stuck = True
     stuck_thrshld = 100
     
-    epoches = 100
-    steps_epoch = 200
+    episodes = 100
+    steps_episode = 250
     train_thrshld = 100
-    steps_train = 4
-    train_size = 48
+    steps_train = 1
+    train_size = 32
     
     test_intv = 5
     draw_fig_intv = 20
