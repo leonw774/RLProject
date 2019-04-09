@@ -4,38 +4,42 @@ from matplotlib import pyplot as plt
 from time import sleep
 from keras.models import Model, load_model, optimizers
 
-from setting import Setting as set
+from configure import Configuration as cfg
 from stepqueue import StepQueue
 from qnet import QNet
 from gameagent import GameAgent
-from gamereward import MapReward, DiffReward
+from gamereward import DiffReward, TieredDiffReward, MapReward
 
 class DQN() :
     
     def __init__(self) :
-        
+        self.logfile = open("log.csv", 'w')
         self.game = GameAgent()
-        self.model_optimizer = optimizers.rmsprop(lr = set.learning_rate, decay = set.learning_rate_decay)
+        self.model_optimizer = optimizers.rmsprop(lr = cfg.learning_rate, decay = cfg.learning_rate_decay)
             
         self.A = []
-        for i in range(set.actions_num) :
-            action_onehot = np.zeros((1, set.actions_num))
+        for i in range(cfg.actions_num) :
+            action_onehot = np.zeros((1, cfg.actions_num))
             action_onehot[0, i] = 1
             self.A.append(action_onehot)
     
-    def count_down(self, cd) :
+    def countdown(self, cd) :
         for i in range(cd) :
             print(cd - i)
             sleep(1.0)
     
-    def add_noise(self, noisy_scrshot) :
-        noisy_scrshot += np.random.uniform(low = -set.noise_range, high = set.noise_range, size = noisy_scrshot.shape)
+    def addNoise(self, noisy_scrshot) :
+        noisy_scrshot += np.random.uniform(low = -cfg.noise_range, high = cfg.noise_range, size = noisy_scrshot.shape)
         noisy_scrshot[noisy_scrshot > 1.0] = 1.0
         noisy_scrshot[noisy_scrshot < 0.0] = 0.0
         return noisy_scrshot
     # end def get_screen_rect
     
-    def draw_fig(self, loss, avgQ, avgR, endMap, testEndMap) :
+    def writeLog(self, epoch, loss, avgQ, avrR, endMap) :
+        log_string = ','.join([str(epoch), str(loss), str(avgQ), str(avrR), str(endMap)])
+        self.logfile.write(log_string + "\n")
+    
+    def drawFig(self, loss, avgQ, avgR, endMap = None, testEndMap = None) :
     
         plt.figure(figsize = (12, 8))
         plt.xlabel("epoch")
@@ -80,13 +84,13 @@ class DQN() :
         plt.savefig("fig/test_end_map.png")
         plt.close()
         
-    def test(self, model_weight_name, epsilon = set.eps_test, rounds = 1, max_step = set.steps_test, goal = None, verdict = False) :
+    def test(self, model_weight_name, epsilon = cfg.eps_test, rounds = 1, max_step = cfg.steps_test, goal = None, verdict = False) :
 
         testQ = load_model(model_weight_name)
         if verdict :
             print("Test begin for:", model_weight_name, "Step Limit:", max_step)    
         
-        if goal is not None :
+        if goal :
             if verdict : print("Goal:", goal)
             test_result = np.zeros((rounds, 2))
         else :
@@ -96,47 +100,41 @@ class DQN() :
             if verdict : print("\nRound", i, "begin")
             # click "NEW GAME"
             self.game.newgame()
-            test_stepQueue = StepQueue()
             test_rewardFunc = MapReward()
-            cur_shot = self.game.get_screenshot(wait_no_move = True) 
+            cur_shot = self.game.getScreenshot(wait_no_move = True) 
             
             for n in range(max_step) :
-                cur_shot = self.game.get_screenshot()
-                
-                if goal is not None :
-                    if test_rewardFunc.getCurMap(cur_shot) >= goal :
-                        if verdict : print("Reached Goal!")
-                        test_result[i] = np.array((n, True))
-                        break
-                
-                predict_Q = np.squeeze(testQ.predict(self.add_noise(cur_shot)))
+                predict_Q = np.squeeze(testQ.predict(self.addNoise(cur_shot)))
                 if np.random.random() < epsilon :
                     # soft max
                     w = predict_Q
                     w = np.exp(w)
                     w /= w.sum()
-                    cur_action = np.random.choice(np.arange(set.actions_num), p = w)
+                    cur_action = np.random.choice(np.arange(cfg.actions_num), p = w)
                 else :
                     cur_action = np.argmax(predict_Q)
                 #print(predict_Q)
                 if verdict : print("Score:", test_rewardFunc.getCurMap(cur_shot), "\nDo action", cur_action, "with Q:", predict_Q[cur_action], "\n")
                     
-                self.game.do_control(cur_action)
+                self.game.doControl(cur_action)
+                
+                cur_shot = self.game.getScreenshot()
+                
+                if goal :
+                    if test_rewardFunc.getCurMap(cur_shot) >= goal :
+                        if verdict : print("Reached Goal!")
+                        test_result[i] = np.array((n, True))
+                        break
                 
             # end for step_test
             
-            end_map = test_rewardFunc.getCurMap(cur_shot)
-            
-            if goal is not None :
-                if test_result[i, 0] == 0 :
-                    if end_map >= goal :
-                        if verdict : print("Reached Goal!")
-                        test_result[i] = np.array((max_step, True))
-                    else :
-                        print("Time out")
-                        test_result[i] = np.array((max_step, False))
+            # check if reached goal
+            if goal :
+                if test_result[i, 0] == 0 : # if not reached goal
+                    print("Time out")
+                    test_result[i] = np.array((max_step, False))
             else :
-                test_result[i] = end_map
+                test_result[i] = test_rewardFunc.getCurMap(self.game.getScreenshot())
             
             if verdict : print("Test round", i, "ended. Score:", end_map, "\n")
         
@@ -154,151 +152,163 @@ class DQN() :
         after a number of steps, copy Q to Q_target.
         '''
         
-        Q = QNet(set.model_input_shape, set.actions_num)
+        Q = QNet(cfg.model_input_shape, cfg.actions_num)
         Q.summary()
         Q.compile(loss = "mse", optimizer = self.model_optimizer, metrics = ['mse'])
         
         if load_weight_name != None :
             Q.load_weights(load_weight_name)
         if use_target_Q :
-            Q_target = QNet(set.model_input_shape, set.actions_num)
+            Q_target = QNet(cfg.model_input_shape, cfg.actions_num)
             Q_target.set_weights(Q.get_weights())
         else :
             Q_target = None
         
         stepQueue = StepQueue()
-        if set.use_mapreward : rewardFunc = MapReward()
-        else : rewardFunc = DiffReward()
+        if cfg.use_reward == 0 :
+            rewardFunc = DiffReward()
+        elif cfg.use_reward == 1 :
+            rewardFunc = TieredDiffReward()
+        elif cfg.use_reward == 2 :
+            rewardFunc = MapReward()
+        
         loss_list = []
-        endMap_list = []
         avgR_list = []
         avgQ_list = []
-        test_endMap_list = []
+        endMap_list = []
+        testEndMap_list = []
         
-        logfile = open("log.csv", 'w')
-        logfile.write("epoch, loss, endMap, avrgR, avrgQ\n")
+        self.writeLog("epoch", "loss", "avrgR", "avrgQ", "endMap")
         
-        for e in range(set.episodes) :
+        for e in range(cfg.episodes) :
             
             self.game.newgame()
             sys.stdout.write(str(e) + ":")
             sys.stdout.flush()
             
-            nxt_shot = self.game.get_screenshot(wait_no_move = False)
+            nxt_shot = self.game.getScreenshot(wait_no_move = False)
             
-            this_epoch_eps = max(set.eps_min, set.epsilon * (set.eps_decay ** e))
+            this_epoch_eps = max(cfg.eps_min, cfg.epsilon * (cfg.eps_decay ** e))
             avgR_list.append(0)
             avgQ_list.append(0)
             loss_list.append(0)
             stuck_count = 0
 
-            for n in range(set.steps_episode) :
-                if (n + 1) % (set.steps_episode / 10) == 0 :
+            for n in range(cfg.steps_episode) :
+                if (n + 1) % (cfg.steps_episode / 10) == 0 :
                     sys.stdout.write(".")
                     sys.stdout.flush()
                 
                 cur_shot = nxt_shot
 
                 # make action
-                predQ = np.squeeze(Q.predict(self.add_noise(cur_shot)))
-                avgQ_list[e] += np.max(predQ) / set.steps_episode
+                predQ = np.squeeze(Q.predict(self.addNoise(cur_shot)))
+                avgQ_list[e] += np.max(predQ) / cfg.steps_episode
                 if np.random.random() < this_epoch_eps :
-                    cur_action = np.random.randint(set.actions_num)
+                    cur_action = np.random.randint(cfg.actions_num)
                 else :
-                    cur_action = np.argmax(predQ)
+                    # soft max
+                    w = predQ
+                    w = np.exp(w)
+                    w /= w.sum()
+                    cur_action = np.random.choice(np.arange(cfg.actions_num), p = w)
                 
-                self.game.do_control(cur_action)
+                self.game.doControl(cur_action)
                 
-                nxt_shot = self.game.get_screenshot(wait_no_move = True)
-                cur_reward = rewardFunc.calReward(cur_shot, nxt_shot) # pre-action, after-action
+                nxt_shot = self.game.getScreenshot(wait_no_move = True)
+                cur_reward = rewardFunc.getReward(cur_shot, nxt_shot) # pre-action, after-action
                 stepQueue.addStep(cur_shot, cur_action, cur_reward)
-                avgR_list[e] += cur_reward / set.steps_episode
+                avgR_list[e] += cur_reward / cfg.steps_episode
                 #print(cur_action, ",", cur_reward)
                 
                 # check if stuck
-                if set.check_stuck :
+                if cfg.check_stuck :
                     if cur_reward == 0 :
                         stuck_count += 1 
                     elif stuck_count > 0 :
                         stuck_count -= 1
-                    if stuck_count > set.stuck_thrshld :
-                        loss_list[e] *= (float(set.steps_episode) / float(n))
-                        avgR_list[e] *= (float(set.steps_episode) / float(n))
+                    if stuck_count > cfg.stuck_thrshld :
+                        loss_list[e] *= (float(cfg.steps_episode) / float(n))
+                        avgR_list[e] *= (float(cfg.steps_episode) / float(n))
                         sys.stdout.write(str(n))
                         sys.stdout.flush()
                         break
                 
-                if stepQueue.getLength() > set.train_thrshld and n % set.steps_train == 0 :
+                if stepQueue.getLength() > cfg.train_thrshld and n % cfg.steps_train == 0 :
                     # Experience Replay
-                    random_step = np.random.randint(stepQueue.getLength() - (set.train_size + 1))
-                    trn_s, trn_a, trn_r = stepQueue.getStepsAsArray(random_step, set.train_size + 1)
+                    random_step = np.random.randint(stepQueue.getLength() - (cfg.train_size + 1))
+                    trn_s, trn_a, trn_r = stepQueue.getStepsAsArray(random_step, cfg.train_size + 1)
                     
                     # make next predicted reward array and train input array at same time
-                    new_r = np.zeros((set.train_size, set.actions_num))
-                    for j in range(set.train_size) :
+                    new_r = np.zeros((cfg.train_size, cfg.actions_num))
+                    for j in range(cfg.train_size) :
                         if use_target_Q :
                             new_r[j] = Q_target.predict(np.expand_dims(trn_s[j], axis = 0))
                             predict_Q = Q_target.predict(np.expand_dims(trn_s[j+1], axis = 0))
                         else :
                             new_r[j] = Q.predict(np.expand_dims(trn_s[j], axis = 0))
                             predict_Q = Q.predict(np.expand_dims(trn_s[j+1], axis = 0))
-                        new_r[j, trn_a[j]] = trn_r[j] + np.max(predict_Q) * set.gamma
+                        new_r[j, trn_a[j]] = trn_r[j] + np.max(predict_Q) * cfg.gamma
                         # Q_new = r + Q_predict(a,s) * gamma
                     
                     #print("new_r\n", new_r[0])
                     
-                    loss_list[e] += Q.train_on_batch(trn_s[:set.train_size], new_r)[0] / set.steps_episode * set.steps_train
+                    loss_list[e] += Q.train_on_batch(trn_s[:cfg.train_size], new_r)[0] / cfg.steps_episode * cfg.steps_train
                     
             # end for(STEP_PER_EPOCH)
             self.game.quitgame()
             
             # write log file and log list
-            if set.use_mapreward :
+            print("loss: %.4f avrgQ: %.3f avrgR: %.3f" % (loss_list[e], avgQ_list[e], avgR_list[e]))
+            if cfg.use_reward == 0 :
+                rewardFunc.clear() # DiffReward has to clear memory
+                endMap_list.append("None")
+            elif cfg.use_reward == 1 :
+                endMap_list.append("None")
+            elif cfg.use_reward == 2 :
                 endMap = rewardFunc.getCurMap(cur_shot)
-                print("\tend at map %d\tloss: %.4f  avrgQ: %.3f avrgR: %.3f" % (endMap, loss_list[e], avgQ_list[e], avgR_list[e]))
-                log_string = ','.join([str(e), str(loss_list[e]), str(endMap), str(avgR_list[e]), str(avgQ_list[e])])
-                logfile.write(log_string + "\n")
                 endMap_list.append(endMap)
-            else :
-                print("\tloss: %.4f  avrgQ: %.3f avrgR: %.3f" % (loss_list[e], avgQ_list[e], avgR_list[e]))
-                log_string = ','.join([str(e), str(loss_list[e]), "None", str(avgR_list[e]), str(avgQ_list[e])])
-                logfile.write(log_string + "\n")
-                # DiffReward has to clear memory
-                rewardFunc.clear()
+                print("end map", endMap)
+            self.writeLog(str(e), str(loss_list[e]), str(avgQ_list[e]), str(avgR_list[e]), str(endMap_list[e]))
             
-            if use_target_Q and stepQueue.getLength() > set.train_thrshld :
+            if use_target_Q and stepQueue.getLength() > cfg.train_thrshld :
                 Q_target.set_weights(Q.get_weights())
                 Q_target.save(save_weight_name)
             else :
                 Q.save(save_weight_name)
                 
-            if (e + 1) % set.test_intv == 0 :
+            if (e + 1) % cfg.test_intv == 0 :
                 test_endMap = self.test(save_weight_name, verdict = False)[0]
-                test_endMap_list.append(test_endMap);
+                testEndMap_list.append(test_endMap)
                 print("test: ", test_endMap)
             
-            if (e + 1) % set.draw_fig_intv == 0 :
-                self.draw_fig(loss_list, avgR_list, avgQ_list, endMap_list, test_endMap_list)
+            if (e + 1) % cfg.draw_fig_intv == 0 :
+                self.drawFig(loss_list, avgR_list, avgQ_list, endMap_list, testEndMap_list)
             
         # end for(episodes)
-        self.draw_fig(loss_list, avgR_list, avgQ_list, endMap_list, test_endMap_list)
-        
+        self.drawFig(loss_list, avgR_list, avgQ_list, endMap_list, testEndMap_list)   
     # end def fit
     
-    def random_action(self, steps = None) :
+    def random_action(self, steps = cfg.steps_test) :
         # click "NEW GAME"
         self.game.newgame()
-        rewardFunc = DiffReward()
-        if steps == None : steps = set.steps_test
+        
+        if cfg.use_reward == 0 :
+            rewardFunc = DiffReward()
+        elif cfg.use_reward == 1 :
+            rewardFunc = TieredDiffReward()
+        elif cfg.use_reward == 2 :
+            rewardFunc = MapReward()
+        
         for n in range(steps) :
-            cur_shot = self.game.get_screenshot()
-            cur_action = np.random.randint(set.actions_num)
-            self.game.do_control(cur_action)
-            nxt_shot = self.game.get_screenshot()
-            cur_reward = rewardFunc.calReward(cur_shot, nxt_shot)
+            cur_shot = self.game.getScreenshot()
+            cur_action = np.random.randint(cfg.actions_num)
+            self.game.doControl(cur_action)
+            nxt_shot = self.game.getScreenshot()
+            cur_reward = rewardFunc.getReward(cur_shot, nxt_shot)
             print(cur_action, ",", cur_reward)
         
-        print("test end, of reward: %.2f", cur_reward)
+        print("test end, of reward: %.2f" % cur_reward)
         # Exit Game...
         self.game.quitgame()
     # end def

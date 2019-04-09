@@ -28,7 +28,7 @@ def get_game_region(title = None) :
         raise Exception("no window title was given.")
 # end get_game_region
 
-class Setting() :
+class Configuration() :
     
     # SCREENSHOTS SETTING
     shot_w = 108
@@ -43,26 +43,26 @@ class Setting() :
     # Q NET SETTING
     model_input_shape = (shot_h, shot_w, shot_c)
     learning_rate = 0.00025
-    learning_rate_decay = 1e-4
+    learning_rate_decay = 1e-5
     
     # REWARD SETTING
-    use_mapreward = False
+    use_reward = 1
     mapname_list = sorted(os.listdir("map/"), key = sorting_filename_as_int)
-    no_move_thrshld = shot_h * shot_w * shot_c * 0.06 * ((shot_c - 1) * 0.01 + 1)
+    no_move_thrshld = shot_h * shot_w * shot_c * 0.056 * ((shot_c - 1) * 0.1 + 1)
     gamma = 0.5
     base_reward = 1.0
     
 
     # ACTION SETTIN
     mouse_straight_angles = 12
-    mouse_round_angles = 4
+    mouse_round_angles = 6
     actions_num = (mouse_straight_angles * 2) + (mouse_round_angles * 2)
     # ROUND ACTION ONLY HAS CLOCKWISE BECAUSE COUNTER-CLOCKWISE IS USELESS
-    # {slow straight(12), fast straight(12), cwise round slow / fast(12), ccwise round slow / fast(12)}
-    do_control_pause = 0.03
+    # {slow straight(12), fast straight(12), cwise round slow and fast(12), ccwise round slow and fast(12)}
+    control_pause = 0.02
 
     # STEP QUEUE SETTING
-    stepQueue_length_max = 2000 # set 0 to be no limit
+    stepQueue_length_max = 200 # set 0 to be no limit
 
     # TRAINING SETTING
     use_target_Q = False
@@ -73,11 +73,11 @@ class Setting() :
     check_stuck = True
     stuck_thrshld = 100
     
-    episodes = 100
-    steps_episode = 250
-    train_thrshld = 100
+    episodes = 10
+    steps_episode = 100
+    train_thrshld = 40
     steps_train = 1
-    train_size = 32
+    train_size = 16
     
     test_intv = 5
     draw_fig_intv = 20

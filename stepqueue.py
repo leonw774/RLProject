@@ -1,6 +1,6 @@
 import numpy as np
 from PIL import Image
-from setting import Setting as set
+from configure import Configuration as cfg
 
 class StepQueue() :
 
@@ -8,16 +8,16 @@ class StepQueue() :
         self.scrshotList = [] 
         self.actionList = []
         self.rewardList = []
-        self.actionsOccurrence = np.zeros(set.actions_num)
+        self.actionsOccurrence = np.zeros(cfg.actions_num)
     
     def addStep(self, scrshot, action, reward) :
-        if len(self.scrshotList) + 1 == set.stepQueue_length_max :
+        if len(self.scrshotList) + 1 == cfg.stepQueue_length_max :
             self.scrshotList.pop(0)
             self.actionList.pop(0)
             self.rewardList.pop(0)
         
-        if scrshot.shape != set.shot_shape:
-            print("scrshot shape no good: Received", scrshot.shape, " but ", set.shot_shape, " is expected.")
+        if scrshot.shape != cfg.shot_shape:
+            print("scrshot bad shape: Received", scrshot.shape, " but ", cfg.shot_shape, " is expected.")
             return
         
         self.scrshotList.append(scrshot[0]) # np array
@@ -29,7 +29,7 @@ class StepQueue() :
         self.scrshotList = [] 
         self.actionList = []
         self.rewardList = []
-        self.actionsOccurrence = np.zeros(set.actions_num)
+        self.actionsOccurrence = np.zeros(cfg.actions_num)
         
     def getLength(self) :
         return len(self.scrshotList)

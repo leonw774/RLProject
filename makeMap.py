@@ -7,15 +7,15 @@ AI could learn from it.
 import numpy as np
 from PIL import Image
 from time import sleep
-from setting import TrainingSetting as set
+from configure import Configuration as cfg
 from pyautogui import click, screenshot
 from directinputs import Keys
 directKeys = Keys()
 
-GameRegion = set.get_game_region("Getting Over It")
+GameRegion = cfg.get_game_region("Getting Over It")
 scrshotList = []
 
-#count_down
+#countdown
 for i in range(10) :
     print(10 - i)
     sleep(1.0)
@@ -34,7 +34,7 @@ while(True) :
         if len(scrshotList) == 0 :
             scrshotList.append(array_scrshot)
             print("map", saved_scrshot_count, "added")
-            scrshot.save("map-new/" + str(saved_scrshot_count) + ".png")
+            scrshot.save("map_new/" + str(saved_scrshot_count) + ".png")
             saved_scrshot_count += 1
         else :
             min_diff = 2147483648
@@ -45,6 +45,6 @@ while(True) :
             if min_diff > 0.05 * GameRegion[2] * GameRegion[3]:
                 scrshotList.append(array_scrshot)
                 print("map", saved_scrshot_count, "added")
-                scrshot.save("map-new/" + str(saved_scrshot_count) + ".png")
+                scrshot.save("map_new/" + str(saved_scrshot_count) + ".png")
                 saved_scrshot_count += 1
     
