@@ -106,5 +106,7 @@ venv.bak/
 .vscode
 *.h5
 *.model
+*csv
+fig/
 map_new/*.png
 !models/*/*.h5

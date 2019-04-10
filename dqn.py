@@ -167,8 +167,10 @@ class DQN() :
         stepQueue = StepQueue()
         if cfg.use_reward == 0 :
             rewardFunc = DiffReward()
+            curMapFunc = MapReward()
         elif cfg.use_reward == 1 :
             rewardFunc = TieredDiffReward()
+            curMapFunc = MapReward()
         elif cfg.use_reward == 2 :
             rewardFunc = MapReward()
         
@@ -259,17 +261,17 @@ class DQN() :
             self.game.quitgame()
             
             # write log file and log list
-            print("loss: %.4f avrgQ: %.3f avrgR: %.3f" % (loss_list[e], avgQ_list[e], avgR_list[e]))
+            
             if cfg.use_reward == 0 :
                 rewardFunc.clear() # DiffReward has to clear memory
-                endMap_list.append("None")
+                endMap = curMapFunc.getCurMap(cur_shot)
             elif cfg.use_reward == 1 :
-                endMap_list.append("None")
+                endMap = curMapFunc.getCurMap(cur_shot)
             elif cfg.use_reward == 2 :
                 endMap = rewardFunc.getCurMap(cur_shot)
-                endMap_list.append(endMap)
-                print("end map", endMap)
-            self.writeLog(str(e), str(loss_list[e]), str(avgQ_list[e]), str(avgR_list[e]), str(endMap_list[e]))
+            endMap_list.append(endMap)
+            print("loss: %.4f avrgQ: %.3f avrgR: %.3f end map %d" % (loss_list[e], avgQ_list[e], avgR_list[e], endMap))
+            self.writeLog(str(e), str(loss_list[e]), str(avgQ_list[e]), str(avgR_list[e]), str(endMap))
             
             if use_target_Q and stepQueue.getLength() > cfg.train_thrshld :
                 Q_target.set_weights(Q.get_weights())

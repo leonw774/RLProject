@@ -43,7 +43,7 @@ class Configuration() :
     # Q NET SETTING
     model_input_shape = (shot_h, shot_w, shot_c)
     learning_rate = 0.00025
-    learning_rate_decay = 1e-5
+    learning_rate_decay = 0.0
     
     # REWARD SETTING
     use_reward = 1
@@ -62,22 +62,22 @@ class Configuration() :
     control_pause = 0.02
 
     # STEP QUEUE SETTING
-    stepQueue_length_max = 200 # set 0 to be no limit
+    stepQueue_length_max = 500 # set 0 to be no limit
 
     # TRAINING SETTING
     use_target_Q = False
     epsilon = 1.0
     eps_min = 0.1
-    eps_decay = 0.975
+    eps_decay = 0.9
         
     check_stuck = True
     stuck_thrshld = 100
     
-    episodes = 10
-    steps_episode = 100
-    train_thrshld = 40
+    episodes = 40
+    steps_episode = 200
+    train_thrshld = 50
     steps_train = 1
-    train_size = 16
+    train_size = 32
     
     test_intv = 5
     draw_fig_intv = 20
