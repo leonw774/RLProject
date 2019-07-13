@@ -7,15 +7,15 @@ from keras.models import Model, load_model, optimizers
 from configure import Configuration as cfg
 from stepqueue import StepQueue
 from qnet import QNet
+from actorcritic import ActorCritic
 from gameagent import GameAgent
 from gamereward import DiffReward, TieredDiffReward, MapReward
 
-class DQN() :
+class DRL() :
     
     def __init__(self) :
         self.logfile = open("log.csv", 'w')
         self.game = GameAgent()
-        self.model_optimizer = optimizers.rmsprop(lr = cfg.learning_rate, decay = cfg.learning_rate_decay)
             
         self.A = []
         for i in range(cfg.actions_num) :
@@ -35,11 +35,11 @@ class DQN() :
         return noisy_scrshot
     # end def get_screen_rect
     
-    def writeLog(self, epoch, loss, avgQ, avrR, endMap) :
-        log_string = ','.join([str(epoch), str(loss), str(avgQ), str(avrR), str(endMap)])
+    def write_log(self, values) :
+        log_string = ','.join(values)
         self.logfile.write(log_string + "\n")
     
-    def drawFig(self, loss, avgQ, avgR, endMap = None, testEndMap = None) :
+    def drawFig(self, loss, avgR, endMap = None, testEndMap = None) :
     
         plt.figure(figsize = (12, 8))
         plt.xlabel("epoch")
@@ -53,13 +53,6 @@ class DQN() :
         plt.plot(avgR, label = "averange reward")
         plt.legend(loc = "upper right")
         plt.savefig("fig/avg_reward.png")
-        plt.close()
-        
-        plt.figure(figsize = (12, 6))
-        plt.xlabel("epoch")
-        plt.plot(avgQ, label = "averange Q")
-        plt.legend(loc = "upper right")
-        plt.savefig("fig/avg_Q.png")
         plt.close()
         
         the_tree = [11] * len(endMap)
@@ -86,7 +79,7 @@ class DQN() :
         
     def test(self, model_weight_name, epsilon = cfg.eps_test, rounds = 1, max_step = cfg.steps_test, goal = None, verdict = False) :
 
-        testQ = load_model(model_weight_name)
+        testModel = load_model(model_weight_name)
         if verdict :
             print("Test begin for:", model_weight_name, "Step Limit:", max_step)    
         
@@ -101,18 +94,10 @@ class DQN() :
             # click "NEW GAME"
             self.game.newgame()
             test_rewardFunc = MapReward()
-            cur_shot = self.game.getScreenshot(wait_no_move = True) 
+            cur_shot = self.game.getScreenshot(wait_still = True) 
             
             for n in range(max_step) :
-                predict_Q = np.squeeze(testQ.predict(self.addNoise(cur_shot)))
-                if np.random.random() < epsilon :
-                    # soft max
-                    w = predict_Q
-                    w = np.exp(w)
-                    w /= w.sum()
-                    cur_action = np.random.choice(np.arange(cfg.actions_num), p = w)
-                else :
-                    cur_action = np.argmax(predict_Q)
+                cur_action = Q.decision(self.addNoise(cur_shot), temperature = 0.1)
                 #print(predict_Q)
                 if verdict : print("Score:", test_rewardFunc.getCurMap(cur_shot), "\nDo action", cur_action, "with Q:", predict_Q[cur_action], "\n")
                     
@@ -143,26 +128,18 @@ class DQN() :
         return test_result
     # end def test
     
-    def fit(self, load_weight_name = None, save_weight_name = "Q_model.h5", use_target_Q = False) :
+    def fit(self, load_weight_name = None, save_weight_name = "Q_model.h5", use_target_model = False) :
         '''
-        We will train Q, at time t, as:
-            y_pred = Q([state_t, a_t])
+        We will train model, at time t, as:
+            y_pred = model([state_t, a_t])
             y_true = r_t + gamma * max(Q_target([state_t, for a in A]))
         update Q's weight in mse
-        after a number of steps, copy Q to Q_target.
+        after a number of steps, copy model to model_target.
         '''
-        
-        Q = QNet(cfg.model_input_shape, cfg.actions_num)
-        Q.summary()
-        Q.compile(loss = "mse", optimizer = self.model_optimizer, metrics = ['mse'])
-        
-        if load_weight_name != None :
-            Q.load_weights(load_weight_name)
-        if use_target_Q :
-            Q_target = QNet(cfg.model_input_shape, cfg.actions_num)
-            Q_target.set_weights(Q.get_weights())
-        else :
-            Q_target = None
+        if cfg.use_model_name == "QNET" :
+            myModel = QNet(use_target_model, load_weight_name, cfg.model_input_shape, cfg.actions_num)
+        elif cfg.use_model_name == "AC" :
+            myModel = ActorCritic(use_target_model, load_weight_name, cfg.model_input_shape, cfg.actions_num)
         
         stepQueue = StepQueue()
         if cfg.use_reward == 0 :
@@ -176,11 +153,10 @@ class DQN() :
         
         loss_list = []
         avgR_list = []
-        avgQ_list = []
-        endMap_list = []
-        testEndMap_list = []
+        endmap_list = []
+        test_endmap_list = []
         
-        self.writeLog("epoch", "loss", "avrgR", "avrgQ", "endMap")
+        self.write_log(["epoch", "loss", "avrgR", "endMap"])
         
         for e in range(cfg.episodes) :
             
@@ -188,11 +164,10 @@ class DQN() :
             sys.stdout.write(str(e) + ":")
             sys.stdout.flush()
             
-            nxt_shot = self.game.getScreenshot(wait_no_move = False)
+            nxt_shot = self.game.getScreenshot(wait_still = False)
             
-            this_epoch_eps = max(cfg.eps_min, cfg.epsilon * (cfg.eps_decay ** e))
+            cur_epoch_eps = max(cfg.eps_min, cfg.epsilon * (cfg.eps_decay ** e))
             avgR_list.append(0)
-            avgQ_list.append(0)
             loss_list.append(0)
             stuck_count = 0
 
@@ -204,20 +179,14 @@ class DQN() :
                 cur_shot = nxt_shot
 
                 # make action
-                predQ = np.squeeze(Q.predict(self.addNoise(cur_shot)))
-                avgQ_list[e] += np.max(predQ) / cfg.steps_episode
-                if np.random.random() < this_epoch_eps :
+                if np.random.random() < cur_epoch_eps :
                     cur_action = np.random.randint(cfg.actions_num)
                 else :
-                    # soft max
-                    w = predQ
-                    w = np.exp(w)
-                    w /= w.sum()
-                    cur_action = np.random.choice(np.arange(cfg.actions_num), p = w)
+                    cur_action = myModel.decision(self.addNoise(cur_shot))
                 
                 self.game.doControl(cur_action)
                 
-                nxt_shot = self.game.getScreenshot(wait_no_move = True)
+                nxt_shot = self.game.getScreenshot(wait_still = True)
                 cur_reward = rewardFunc.getReward(cur_shot, nxt_shot) # pre-action, after-action
                 stepQueue.addStep(cur_shot, cur_action, cur_reward)
                 avgR_list[e] += cur_reward / cfg.steps_episode
@@ -241,21 +210,9 @@ class DQN() :
                     random_step = np.random.randint(stepQueue.getLength() - (cfg.train_size + 1))
                     trn_s, trn_a, trn_r = stepQueue.getStepsAsArray(random_step, cfg.train_size + 1)
                     
-                    # make next predicted reward array and train input array at same time
-                    new_r = np.zeros((cfg.train_size, cfg.actions_num))
-                    for j in range(cfg.train_size) :
-                        if use_target_Q :
-                            new_r[j] = Q_target.predict(np.expand_dims(trn_s[j], axis = 0))
-                            predict_Q = Q_target.predict(np.expand_dims(trn_s[j+1], axis = 0))
-                        else :
-                            new_r[j] = Q.predict(np.expand_dims(trn_s[j], axis = 0))
-                            predict_Q = Q.predict(np.expand_dims(trn_s[j+1], axis = 0))
-                        new_r[j, trn_a[j]] = trn_r[j] + np.max(predict_Q) * cfg.gamma
-                        # Q_new = r + Q_predict(a,s) * gamma
+                    loss = myModel.learn(trn_s, trn_a, trn_r)
+                    loss_list[e] += loss / cfg.steps_episode * cfg.steps_train
                     
-                    #print("new_r\n", new_r[0])
-                    
-                    loss_list[e] += Q.train_on_batch(trn_s[:cfg.train_size], new_r)[0] / cfg.steps_episode * cfg.steps_train
                     
             # end for(STEP_PER_EPOCH)
             self.game.quitgame()
@@ -269,26 +226,23 @@ class DQN() :
                 endMap = curMapFunc.getCurMap(cur_shot)
             elif cfg.use_reward == 2 :
                 endMap = rewardFunc.getCurMap(cur_shot)
-            endMap_list.append(endMap)
-            print("loss: %.4f avrgQ: %.3f avrgR: %.3f end map %d" % (loss_list[e], avgQ_list[e], avgR_list[e], endMap))
-            self.writeLog(str(e), str(loss_list[e]), str(avgQ_list[e]), str(avgR_list[e]), str(endMap))
+            endmap_list.append(endMap)
+            print("loss: %.4f avrgR: %.3f end map %d" % (loss_list[e], avgR_list[e], endMap))
+            self.write_log([str(e), str(loss_list[e]), str(avgR_list[e]), str(endMap)])
             
-            if use_target_Q and stepQueue.getLength() > cfg.train_thrshld :
-                Q_target.set_weights(Q.get_weights())
-                Q_target.save(save_weight_name)
-            else :
-                Q.save(save_weight_name)
+            if stepQueue.getLength() > cfg.train_thrshld :
+                myModel.save(save_weight_name)
                 
             if (e + 1) % cfg.test_intv == 0 :
                 test_endMap = self.test(save_weight_name, verdict = False)[0]
-                testEndMap_list.append(test_endMap)
+                test_endmap_list.append(test_endMap)
                 print("test: ", test_endMap)
             
             if (e + 1) % cfg.draw_fig_intv == 0 :
-                self.drawFig(loss_list, avgR_list, avgQ_list, endMap_list, testEndMap_list)
+                self.drawFig(loss_list, avgR_list, endmap_list, test_endmap_list)
             
         # end for(episodes)
-        self.drawFig(loss_list, avgR_list, avgQ_list, endMap_list, testEndMap_list)   
+        self.drawFig(loss_list, avgR_list, endmap_list, test_endmap_list)   
     # end def fit
     
     def random_action(self, steps = cfg.steps_test) :
@@ -315,6 +269,6 @@ class DQN() :
         self.game.quitgame()
     # end def
     
-# end class DQN
+# end class DQL
     
     

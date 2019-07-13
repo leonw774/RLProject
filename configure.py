@@ -40,7 +40,8 @@ class Configuration() :
     shot_wait_max = 100
     noise_range = 0.008
 
-    # Q NET SETTING
+    # MODEL SETTING
+    use_model_name = "AC" # "QNET"
     model_input_shape = (shot_h, shot_w, shot_c)
     learning_rate = 0.00025
     learning_rate_decay = 0.0
@@ -51,7 +52,7 @@ class Configuration() :
     no_move_thrshld = shot_h * shot_w * shot_c * 0.056 * ((shot_c - 1) * 0.1 + 1)
     gamma = 0.5
     base_reward = 1.0
-    
+   
 
     # ACTION SETTIN
     mouse_straight_angles = 12
@@ -65,7 +66,7 @@ class Configuration() :
     stepQueue_length_max = 500 # set 0 to be no limit
 
     # TRAINING SETTING
-    use_target_Q = False
+    use_target_model = False
     epsilon = 1.0
     eps_min = 0.1
     eps_decay = 0.9

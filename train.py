@@ -1,10 +1,10 @@
-import dqn
+import drl
 from datetime import datetime, timedelta
 from configure import Configuration as cfg 
 
 if __name__ == '__main__' :
-    my_dqn = dqn.DQN()
-    my_dqn.countdown(5)
+    my_drl = drl.DRL()
+    my_drl.countdown(5)
     starttime = datetime.now()
     #my_dqn.random_action(steps = 40)
     my_dqn.fit(use_target_Q = cfg.use_target_Q)
