@@ -11,12 +11,12 @@ class GameAgent :
     GAME_REGION = get_game_region("Getting Over It")
     directInput = Keys()
     
-    def getScreenshot(self, wait_no_move = True, savefile = None) :
+    def getScreenshot(self, wait_still = True, savefile = None) :
         # return screen-shot of game in np array in shape of cfg.shot_shape
         array_scrshot = np.zeros(cfg.shot_shape)
         cur = screenshot(region = self.GAME_REGION).convert('RGB').resize(cfg.shot_resize)
         i = 0
-        while(wait_no_move and i <= cfg.shot_wait_max) :
+        while(wait_still and i <= cfg.shot_wait_max) :
             #print("waiting for no moving")
             sleep(cfg.shot_intv_time)
             pre = cur
@@ -48,7 +48,7 @@ class GameAgent :
                 delta, distance = 3, 2400
             else :
                 # fast
-                delta, distance = 20, 4000
+                delta, distance = 20, 3600
             
             angle = 2 * math.pi * id / cfg.mouse_straight_angles
             d_x = math.ceil(math.cos(angle) * delta)
@@ -71,10 +71,10 @@ class GameAgent :
             
             if id < cfg.mouse_round_angles :
                 # slow
-                radius, delta, proportion = 1200, 4, 0.8
+                radius, delta, proportion = 1000, 4, 0.8
             else :
                 # fast
-                radius, delta, proportion = 1500, 18, 0.7
+                radius, delta, proportion = 1500, 16, 0.8
             
             angle_divide = 36.0
             angle_bias = 4.0

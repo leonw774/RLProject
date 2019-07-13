@@ -2,7 +2,7 @@ import sys
 import numpy as np
 from matplotlib import pyplot as plt
 from time import sleep
-from keras.models import Model, load_model, optimizers
+from keras.models import Model, load_model
 
 from configure import Configuration as cfg
 from stepqueue import StepQueue
@@ -36,20 +36,25 @@ class DRL() :
     # end def get_screen_rect
     
     def write_log(self, values) :
-        log_string = ','.join(values)
+        log_list = []
+        for v in values :
+            if len(v) > 0 : log_list.append(str(v[-1]))
+            else : log_list.append("na")
+        log_string = ",".join(log_list)
         self.logfile.write(log_string + "\n")
     
     def drawFig(self, history) :
         for key, value in history.items() :
-            plt.figure(figsize = (12, 8))
-            plt.xlabel("epoch")
-            plt.plot(value, label = key)
-            if key == "endmap" or key == "test_endmap" :
-                the_tree = [11] * len(value)
-                plt.plot(the_tree, label = "The Tree")
-            plt.legend(loc = "upper right")
-            plt.savefig("fig/" + key + ".png")
-            plt.close()
+            if len(value) > 0 :
+                plt.figure(figsize = (12, 8))
+                plt.xlabel("epoch")
+                plt.plot(value, label = key)
+                if key == "endmap" or key == "test_endmap" :
+                    the_tree = [11] * len(value)
+                    plt.plot(the_tree, label = "The Tree")
+                plt.legend(loc = "upper right")
+                plt.savefig("fig/" + key + ".png")
+                plt.close()
         
     def test(self, model_weight_name, epsilon = cfg.eps_test, rounds = 1, max_step = cfg.steps_test, goal = None, verdict = False) :
 
@@ -102,7 +107,7 @@ class DRL() :
         return test_result
     # end def test
     
-    def fit(self, load_weight_name = None, save_weight_name = "Q_model.h5", use_target_model = False) :
+    def fit(self, load_weight_name = None, save_weight_name = "new_model.h5", use_target_model = False) :
         '''
         We will train model, at time t, as:
             y_pred = model([state_t, a_t])
@@ -124,15 +129,17 @@ class DRL() :
             curMapFunc = MapReward()
         elif cfg.use_reward == 2 :
             rewardFunc = MapReward()
+        else :
+            rewardFunc = MapReward()
         
-        history = { "epoch" : [],
-                    "endmap" : [],
-                    "test_endmap" : [],
-                    "avg_reward" : [],
-                    "qnet_loss" : [],
-                    "actor_loss" : [],
-                    "critic_loss" : []
-                  }
+        history = {"epoch" : [], "endmap" : [], "test_endmap" : [], "avg_reward" : []}
+        
+        if cfg.use_model_name == "QNET" :
+            history["qnet_loss"] = []
+        elif cfg.use_model_name == "AC" :
+            history["actor_loss"] = []
+            history["critic_loss"] = []
+            
         self.write_log(history.keys())
         
         for e in range(cfg.episodes) :
@@ -171,7 +178,7 @@ class DRL() :
                 nxt_shot = self.game.getScreenshot(wait_still = True)
                 cur_reward = rewardFunc.getReward(cur_shot, nxt_shot) # pre-action, after-action
                 stepQueue.addStep(cur_shot, cur_action, cur_reward)
-                history["avg_reward"] += cur_reward / cfg.steps_episode
+                history["avg_reward"][-1] += cur_reward / cfg.steps_episode
                 #print(cur_action, ",", cur_reward)
                 
                 # check if stuck
@@ -213,8 +220,11 @@ class DRL() :
             elif cfg.use_reward == 2 :
                 endmap = rewardFunc.getCurMap(cur_shot)
             history["endmap"].append(endmap)
+            
+            sys.stdout.write("\n")
             for key, value in history.items() :
-                if key != "test_endmap" : sys.stdout.write(key + str(value[-1]) + " ")
+                if key != "test_endmap" :
+                    sys.stdout.write(key + " " + str(value[-1]) + "\n")
             sys.stdout.flush()
             self.write_log(history.values())
             
@@ -224,7 +234,7 @@ class DRL() :
             if (e + 1) % cfg.test_intv == 0 :
                 test_endmap = self.test(save_weight_name, verdict = False)[0]
                 history["test_endmap"].append(test_endmap)
-                print("test: ", test_endMap)
+                print("test: ", test_endmap)
             
             if (e + 1) % cfg.draw_fig_intv == 0 :
                 self.drawFig(history)

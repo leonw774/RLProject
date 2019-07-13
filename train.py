@@ -6,9 +6,9 @@ if __name__ == '__main__' :
     my_drl = drl.DRL()
     my_drl.countdown(5)
     starttime = datetime.now()
-    #my_dqn.random_action(steps = 40)
-    my_dqn.fit(use_target_Q = cfg.use_target_Q)
+    #my_drl.random_action(steps = 40)
+    my_drl.fit(use_target_model = cfg.use_target_model)
     print(datetime.now() - starttime)
-    #print(my_dqn.test("Q_model.h5", rounds = 50))
+    #print(my_drl.test("Q_model.h5", rounds = 50))
     
     

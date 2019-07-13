@@ -1,7 +1,7 @@
 import numpy as np
 from configure import Configuration as cfg
-from keras.models import Model
-from keras.layers import Activation, BatchNormalization, Concatenate, Conv2D, Conv3D, Dense, Dropout, Flatten, SimpleRNN, Input, MaxPooling2D, MaxPooling3D, LeakyReLU
+from keras.models import Model, optimizers
+from keras.layers import Activation, BatchNormalization, Concatenate, Conv2D, Conv3D, Dense, Dropout, Flatten, Input, MaxPooling2D, LeakyReLU
 
 # Q-network: guess how many score a image will make
 class QNet() :
@@ -29,7 +29,7 @@ class QNet() :
         else :
             self.model_target = None
     
-    def decision(self, cur_shot, tempature = 0.5)
+    def decision(self, cur_shot, tempature = 0.5) :
         predQ = np.squeeze(self.model.predict(cur_shot))
         # soft max
         w = predQ / tempature

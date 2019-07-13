@@ -43,14 +43,14 @@ class Configuration() :
     # MODEL SETTING
     use_model_name = "AC" # "QNET"
     model_input_shape = (shot_h, shot_w, shot_c)
-    learning_rate = 0.00025
+    learning_rate = 0.001
     learning_rate_decay = 0.0
     
     # REWARD SETTING
-    use_reward = 1 
-    # 1 : Diff
-    # 2 : TierDiff
-    # 3 : Map
+    use_reward = 2
+    # 0 : Diff
+    # 1 : TierDiff
+    # 2 : Map
     mapname_list = sorted(os.listdir("map/"), key = sorting_filename_as_int)
     no_move_thrshld = shot_h * shot_w * shot_c * 0.056 * ((shot_c - 1) * 0.1 + 1)
     gamma = 0.5
@@ -61,7 +61,7 @@ class Configuration() :
     mouse_round_angles = 4
     actions_num = (mouse_straight_angles * 2) + (mouse_round_angles * 2)
     # ROUND ACTION ONLY HAS CLOCKWISE BECAUSE COUNTER-CLOCKWISE IS USELESS
-    # {slow straight(12), fast straight(12), cwise round slow and fast(12), ccwise round slow and fast(12)}
+    # [slow straight, fast straight, cwise round slow and fast, ccwise round slow and fast]
     control_pause = 0.02
 
     # STEP QUEUE SETTING
@@ -71,19 +71,19 @@ class Configuration() :
     use_target_model = False
     epsilon = 1.0
     eps_min = 0.1
-    eps_decay = 0.9
-        
+    eps_decay = 0.99
+    
     check_stuck = True
     stuck_thrshld = 100
     
     episodes = 10
-    steps_episode = 100
-    train_thrshld = 20
+    steps_episode = 20
+    train_thrshld = 10
     steps_train = 1
-    train_size = 16
+    train_size = 8
     
-    test_intv = 5
-    draw_fig_intv = 10
+    test_intv = 2
+    draw_fig_intv = 2
     
     eps_test = 0.1
     steps_test = 100
