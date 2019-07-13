@@ -75,14 +75,14 @@ class ActorCritic:
                 predict_Q = self.model.predict(np.expand_dims(trn_s[j+1], axis = 0))
             new_r[j, trn_a[j]] = trn_r[j] + np.max(predict_Q) * cfg.gamma
         
-        loss_c = self.critic.train_on_batch(trn_s[:cfg.train_size], new_r)
+        closs = self.critic.train_on_batch(trn_s[:cfg.train_size], new_r)
         
         td_error = new_r - trn_r
         actor_y_true = np.array((trn_a, td_error))
-        loss_a = self.actor.train_on_batch(trn_s[:cfg.train_size], actor_y_true)
-        return (loss_a, loss_c)
+        aloss = self.actor.train_on_batch(trn_s[:cfg.train_size], actor_y_true)
+        return aloss, closs
         
-    def save(self, a_save_weight_name, c_save_weight_name):
+    def save(self, a_save_weight_name, c_save_weight_name) :
         self.actor.save(a_save_weight_name)
         self.critic.save(c_save_weight_name)
         

@@ -39,43 +39,17 @@ class DRL() :
         log_string = ','.join(values)
         self.logfile.write(log_string + "\n")
     
-    def drawFig(self, loss, avgR, endMap = None, testEndMap = None) :
-    
-        plt.figure(figsize = (12, 8))
-        plt.xlabel("epoch")
-        plt.plot(loss, label = "loss")
-        plt.legend(loc = "upper right")
-        plt.savefig("fig/loss.png")
-        plt.close()
-        
-        plt.figure(figsize = (12, 6))
-        plt.xlabel("epoch")
-        plt.plot(avgR, label = "averange reward")
-        plt.legend(loc = "upper right")
-        plt.savefig("fig/avg_reward.png")
-        plt.close()
-        
-        the_tree = [11] * len(endMap)
-        
-        plt.figure(figsize = (12, 6))
-        plt.xlabel("epoch")
-        plt.ylim(0, 60)
-        plt.plot(endMap, label = "train_end_map")
-        plt.plot(the_tree, label = "The Tree")
-        plt.legend(loc = "upper right")
-        plt.savefig("fig/train_end_map.png")
-        plt.close()
-        
-        the_tree = [11] * len(testEndMap)
-        
-        plt.figure(figsize = (12, 6))
-        plt.xlabel("test#")
-        plt.ylim(0, 60)
-        plt.plot(testEndMap, label = "test_end_map")
-        plt.plot(the_tree, label = "The Tree")
-        plt.legend(loc = "upper right")
-        plt.savefig("fig/test_end_map.png")
-        plt.close()
+    def drawFig(self, history) :
+        for key, value in history.items() :
+            plt.figure(figsize = (12, 8))
+            plt.xlabel("epoch")
+            plt.plot(value, label = key)
+            if key == "endmap" or key == "test_endmap" :
+                the_tree = [11] * len(value)
+                plt.plot(the_tree, label = "The Tree")
+            plt.legend(loc = "upper right")
+            plt.savefig("fig/" + key + ".png")
+            plt.close()
         
     def test(self, model_weight_name, epsilon = cfg.eps_test, rounds = 1, max_step = cfg.steps_test, goal = None, verdict = False) :
 
@@ -151,12 +125,15 @@ class DRL() :
         elif cfg.use_reward == 2 :
             rewardFunc = MapReward()
         
-        loss_list = []
-        avgR_list = []
-        endmap_list = []
-        test_endmap_list = []
-        
-        self.write_log(["epoch", "loss", "avrgR", "endMap"])
+        history = { "epoch" : [],
+                    "endmap" : [],
+                    "test_endmap" : [],
+                    "avg_reward" : [],
+                    "qnet_loss" : [],
+                    "actor_loss" : [],
+                    "critic_loss" : []
+                  }
+        self.write_log(history.keys())
         
         for e in range(cfg.episodes) :
             
@@ -165,12 +142,17 @@ class DRL() :
             sys.stdout.flush()
             
             nxt_shot = self.game.getScreenshot(wait_still = False)
-            
             cur_epoch_eps = max(cfg.eps_min, cfg.epsilon * (cfg.eps_decay ** e))
-            avgR_list.append(0)
-            loss_list.append(0)
             stuck_count = 0
-
+            
+            history["epoch"].append(e)
+            history["avg_reward"].append(0)
+            if cfg.use_model_name == "QNET" :
+                history["qnet_loss"].append(0)
+            elif cfg.use_model_name == "AC" :
+                history["actor_loss"].append(0)
+                history["critic_loss"].append(0)
+            
             for n in range(cfg.steps_episode) :
                 if (n + 1) % (cfg.steps_episode / 10) == 0 :
                     sys.stdout.write(".")
@@ -189,7 +171,7 @@ class DRL() :
                 nxt_shot = self.game.getScreenshot(wait_still = True)
                 cur_reward = rewardFunc.getReward(cur_shot, nxt_shot) # pre-action, after-action
                 stepQueue.addStep(cur_shot, cur_action, cur_reward)
-                avgR_list[e] += cur_reward / cfg.steps_episode
+                history["avg_reward"] += cur_reward / cfg.steps_episode
                 #print(cur_action, ",", cur_reward)
                 
                 # check if stuck
@@ -210,9 +192,13 @@ class DRL() :
                     random_step = np.random.randint(stepQueue.getLength() - (cfg.train_size + 1))
                     trn_s, trn_a, trn_r = stepQueue.getStepsAsArray(random_step, cfg.train_size + 1)
                     
-                    loss = myModel.learn(trn_s, trn_a, trn_r)
-                    loss_list[e] += loss / cfg.steps_episode * cfg.steps_train
-                    
+                    if cfg.use_model_name == "QNET" :
+                        loss = myModel.learn(trn_s, trn_a, trn_r)
+                        history["qnet_loss"][-1] += loss / cfg.steps_episode * cfg.steps_train
+                    elif cfg.use_model_name == "AC" :
+                        aloss, closs = myModel.learn(trn_s, trn_a, trn_r)
+                        history["actor_loss"][-1] += aloss / cfg.steps_episode * cfg.steps_train
+                        history["critic_loss"][-1] += closs / cfg.steps_episode * cfg.steps_train                    
                     
             # end for(STEP_PER_EPOCH)
             self.game.quitgame()
@@ -221,25 +207,27 @@ class DRL() :
             
             if cfg.use_reward == 0 :
                 rewardFunc.clear() # DiffReward has to clear memory
-                endMap = curMapFunc.getCurMap(cur_shot)
+                endmap = curMapFunc.getCurMap(cur_shot)
             elif cfg.use_reward == 1 :
-                endMap = curMapFunc.getCurMap(cur_shot)
+                endmap = curMapFunc.getCurMap(cur_shot)
             elif cfg.use_reward == 2 :
-                endMap = rewardFunc.getCurMap(cur_shot)
-            endmap_list.append(endMap)
-            print("loss: %.4f avrgR: %.3f end map %d" % (loss_list[e], avgR_list[e], endMap))
-            self.write_log([str(e), str(loss_list[e]), str(avgR_list[e]), str(endMap)])
+                endmap = rewardFunc.getCurMap(cur_shot)
+            history["endmap"].append(endmap)
+            for key, value in history.items() :
+                if key != "test_endmap" : sys.stdout.write(key + str(value[-1]) + " ")
+            sys.stdout.flush()
+            self.write_log(history.values())
             
             if stepQueue.getLength() > cfg.train_thrshld :
                 myModel.save(save_weight_name)
                 
             if (e + 1) % cfg.test_intv == 0 :
-                test_endMap = self.test(save_weight_name, verdict = False)[0]
-                test_endmap_list.append(test_endMap)
+                test_endmap = self.test(save_weight_name, verdict = False)[0]
+                history["test_endmap"].append(test_endmap)
                 print("test: ", test_endMap)
             
             if (e + 1) % cfg.draw_fig_intv == 0 :
-                self.drawFig(loss_list, avgR_list, endmap_list, test_endmap_list)
+                self.drawFig(history)
             
         # end for(episodes)
         self.drawFig(loss_list, avgR_list, endmap_list, test_endmap_list)   

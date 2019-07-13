@@ -47,16 +47,18 @@ class Configuration() :
     learning_rate_decay = 0.0
     
     # REWARD SETTING
-    use_reward = 1
+    use_reward = 1 
+    # 1 : Diff
+    # 2 : TierDiff
+    # 3 : Map
     mapname_list = sorted(os.listdir("map/"), key = sorting_filename_as_int)
     no_move_thrshld = shot_h * shot_w * shot_c * 0.056 * ((shot_c - 1) * 0.1 + 1)
     gamma = 0.5
     base_reward = 1.0
-   
-
+    
     # ACTION SETTIN
-    mouse_straight_angles = 12
-    mouse_round_angles = 6
+    mouse_straight_angles = 8
+    mouse_round_angles = 4
     actions_num = (mouse_straight_angles * 2) + (mouse_round_angles * 2)
     # ROUND ACTION ONLY HAS CLOCKWISE BECAUSE COUNTER-CLOCKWISE IS USELESS
     # {slow straight(12), fast straight(12), cwise round slow and fast(12), ccwise round slow and fast(12)}
@@ -74,14 +76,14 @@ class Configuration() :
     check_stuck = True
     stuck_thrshld = 100
     
-    episodes = 40
-    steps_episode = 200
-    train_thrshld = 50
+    episodes = 10
+    steps_episode = 100
+    train_thrshld = 20
     steps_train = 1
-    train_size = 32
+    train_size = 16
     
     test_intv = 5
-    draw_fig_intv = 20
+    draw_fig_intv = 10
     
     eps_test = 0.1
     steps_test = 100
