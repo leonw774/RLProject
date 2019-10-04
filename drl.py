@@ -9,13 +9,14 @@ from stepqueue import StepQueue
 from qnet import QNet
 from actorcritic import ActorCritic
 from gameagent import GameAgent
-from gamereward import DiffReward, TieredDiffReward, MapReward
+import gamereward #getCurMap PixelDiffReward, TieredPixelDiffReward, MapReward
 
 class DRL() :
     
     def __init__(self) :
         self.logfile = open("log.csv", 'w')
         self.game = GameAgent()
+        self.stuck_count = 0
             
         self.A = []
         for i in range(cfg.actions_num) :
@@ -57,7 +58,6 @@ class DRL() :
                 plt.close()
         
     def test(self, model_weight_name, epsilon = cfg.eps_test, rounds = 1, max_step = cfg.steps_test, goal = None, verdict = False) :
-
         testModel = load_model(model_weight_name)
         if verdict :
             print("Test begin for:", model_weight_name, "Step Limit:", max_step)    
@@ -72,20 +72,19 @@ class DRL() :
             if verdict : print("\nRound", i, "begin")
             # click "NEW GAME"
             self.game.newgame()
-            test_rewardFunc = MapReward()
             cur_shot = self.game.getScreenshot(wait_still = True) 
             
             for n in range(max_step) :
                 cur_action = Q.decision(self.addNoise(cur_shot), temperature = 0.1)
                 #print(predict_Q)
-                if verdict : print("Score:", test_rewardFunc.getCurMap(cur_shot), "\nDo action", cur_action, "with Q:", predict_Q[cur_action], "\n")
+                if verdict : print("Score:", gamereward.getCurMap(cur_shot), "\nDo action", cur_action, "with Q:", predict_Q[cur_action], "\n")
                     
                 self.game.doControl(cur_action)
                 
                 cur_shot = self.game.getScreenshot()
                 
                 if goal :
-                    if test_rewardFunc.getCurMap(cur_shot) >= goal :
+                    if gamereward.getCurMap(cur_shot) >= goal :
                         if verdict : print("Reached Goal!")
                         test_result[i] = np.array((n, True))
                         break
@@ -98,7 +97,7 @@ class DRL() :
                     print("Time out")
                     test_result[i] = np.array((max_step, False))
             else :
-                test_result[i] = test_rewardFunc.getCurMap(self.game.getScreenshot())
+                test_result[i] = gamereward.getCurMap(self.game.getScreenshot())
             
             if verdict : print("Test round", i, "ended. Score:", end_map, "\n")
         
@@ -107,7 +106,15 @@ class DRL() :
         return test_result
     # end def test
     
-    def fit(self, load_weight_name = None, save_weight_name = "new_model.h5", use_target_model = False) :
+    def check_stuck(self, cur_reward) :
+        if cur_reward == 0 :
+            self.stuck_count += 1 
+        elif self.stuck_count > 0 :
+            self.stuck_count -= 1
+        return self.stuck_count > cfg.stuck_thrshld
+    # end def check_stuck
+    
+    def fit(self, load_weight_name = None, save_weight_name = "new_model.h5", use_target_model = cfg.use_target_model) :
         '''
         We will train model, at time t, as:
             y_pred = model([state_t, a_t])
@@ -115,28 +122,16 @@ class DRL() :
         update Q's weight in mse
         after a number of steps, copy model to model_target.
         '''
-        if cfg.use_model_name == "QNET" :
-            myModel = QNet(use_target_model, load_weight_name, cfg.model_input_shape, cfg.actions_num)
-        elif cfg.use_model_name == "AC" :
-            myModel = ActorCritic(use_target_model, load_weight_name, cfg.model_input_shape, cfg.actions_num)
-        
+
         stepQueue = StepQueue()
-        if cfg.use_reward == 0 :
-            rewardFunc = DiffReward()
-            curMapFunc = MapReward()
-        elif cfg.use_reward == 1 :
-            rewardFunc = TieredDiffReward()
-            curMapFunc = MapReward()
-        elif cfg.use_reward == 2 :
-            rewardFunc = MapReward()
-        else :
-            rewardFunc = MapReward()
-        
+        rewardFunc = getattr(gamereward, cfg.reward_func_name)()
         history = {"epoch" : [], "endmap" : [], "test_endmap" : [], "avg_reward" : []}
         
         if cfg.use_model_name == "QNET" :
+            myModel = QNet(use_target_model, load_weight_name, cfg.model_input_shape, cfg.actions_num)
             history["qnet_loss"] = []
         elif cfg.use_model_name == "AC" :
+            myModel = ActorCritic(load_weight_name, cfg.model_input_shape, cfg.actions_num)
             history["actor_loss"] = []
             history["critic_loss"] = []
             
@@ -145,8 +140,7 @@ class DRL() :
         for e in range(cfg.episodes) :
             
             self.game.newgame()
-            sys.stdout.write(str(e) + ":")
-            sys.stdout.flush()
+            sys.stdout.write(str(e) + ":"); sys.stdout.flush()
             
             nxt_shot = self.game.getScreenshot(wait_still = False)
             cur_epoch_eps = max(cfg.eps_min, cfg.epsilon * (cfg.eps_decay ** e))
@@ -162,8 +156,7 @@ class DRL() :
             
             for n in range(cfg.steps_episode) :
                 if (n + 1) % (cfg.steps_episode / 10) == 0 :
-                    sys.stdout.write(".")
-                    sys.stdout.flush()
+                    sys.stdout.write("."); sys.stdout.flush()
                 
                 cur_shot = nxt_shot
 
@@ -183,15 +176,10 @@ class DRL() :
                 
                 # check if stuck
                 if cfg.check_stuck :
-                    if cur_reward == 0 :
-                        stuck_count += 1 
-                    elif stuck_count > 0 :
-                        stuck_count -= 1
-                    if stuck_count > cfg.stuck_thrshld :
-                        loss_list[e] *= (float(cfg.steps_episode) / float(n))
-                        avgR_list[e] *= (float(cfg.steps_episode) / float(n))
-                        sys.stdout.write(str(n))
-                        sys.stdout.flush()
+                    if (self.check_stuck(cur_reward)) :
+                        loss_list[e] *= float(cfg.steps_episode) / float(n)
+                        avgR_list[e] *= float(cfg.steps_episode) / float(n)
+                        sys.stdout.write(str(n)); sys.stdout.flush()
                         break
                 
                 if stepQueue.getLength() > cfg.train_thrshld and n % cfg.steps_train == 0 :
@@ -205,28 +193,22 @@ class DRL() :
                     elif cfg.use_model_name == "AC" :
                         aloss, closs = myModel.learn(trn_s, trn_a, trn_r)
                         history["actor_loss"][-1] += aloss / cfg.steps_episode * cfg.steps_train
-                        history["critic_loss"][-1] += closs / cfg.steps_episode * cfg.steps_train                    
-                    
+                        history["critic_loss"][-1] += closs / cfg.steps_episode * cfg.steps_train
             # end for(STEP_PER_EPOCH)
-            self.game.quitgame()
             
             # write log file and log list
-            
-            if cfg.use_reward == 0 :
-                rewardFunc.clear() # DiffReward has to clear memory
-                endmap = curMapFunc.getCurMap(cur_shot)
-            elif cfg.use_reward == 1 :
-                endmap = curMapFunc.getCurMap(cur_shot)
-            elif cfg.use_reward == 2 :
-                endmap = rewardFunc.getCurMap(cur_shot)
+            rewardFunc.clear() # only DiffReward really do clear memory, other is just a dummy
+            endmap = gamereward.getCurMap(cur_shot)
             history["endmap"].append(endmap)
-            
             sys.stdout.write("\n")
             for key, value in history.items() :
                 if key != "test_endmap" :
                     sys.stdout.write(key + " " + str(value[-1]) + "\n")
             sys.stdout.flush()
             self.write_log(history.values())
+            
+            # back to main menu
+            self.game.quitgame()
             
             if stepQueue.getLength() > cfg.train_thrshld :
                 myModel.save(save_weight_name)
@@ -246,13 +228,6 @@ class DRL() :
     def random_action(self, steps = cfg.steps_test) :
         # click "NEW GAME"
         self.game.newgame()
-        
-        if cfg.use_reward == 0 :
-            rewardFunc = DiffReward()
-        elif cfg.use_reward == 1 :
-            rewardFunc = TieredDiffReward()
-        elif cfg.use_reward == 2 :
-            rewardFunc = MapReward()
         
         for n in range(steps) :
             cur_shot = self.game.getScreenshot()

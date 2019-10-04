@@ -47,12 +47,10 @@ class Configuration() :
     learning_rate_decay = 0.0
     
     # REWARD SETTING
-    use_reward = 2
-    # 0 : Diff
-    # 1 : TierDiff
-    # 2 : Map
-    mapname_list = sorted(os.listdir("map/"), key = sorting_filename_as_int)
-    no_move_thrshld = shot_h * shot_w * shot_c * 0.056 * ((shot_c - 1) * 0.1 + 1)
+    reward_func_name = "PixelDiffReward"
+    map_path = "map/"
+    map_name_list = sorted(os.listdir(map_path), key = sorting_filename_as_int)
+    diff_thrshld = shot_h * shot_w * shot_c * 0.05 * ((shot_c - 1) * 0.1 + 1)
     gamma = 0.5
     base_reward = 1.0
     
@@ -62,6 +60,7 @@ class Configuration() :
     actions_num = (mouse_straight_angles * 2) + (mouse_round_angles * 2)
     # ROUND ACTION ONLY HAS CLOCKWISE BECAUSE COUNTER-CLOCKWISE IS USELESS
     # [slow straight, fast straight, cwise round slow and fast, ccwise round slow and fast]
+    control_intv_time = 0.001
     control_pause = 0.02
 
     # STEP QUEUE SETTING
@@ -82,10 +81,8 @@ class Configuration() :
     steps_train = 1
     train_size = 8
     
-    test_intv = 2
+    test_intv = 5
     draw_fig_intv = 2
     
     eps_test = 0.1
     steps_test = 100
-    
-    

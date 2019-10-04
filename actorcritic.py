@@ -8,20 +8,20 @@ class ActorCritic :
     def __init__ (self, load_weight_name, scrshot_size, action_size) :    
         self.td_error = np.zeros((cfg.train_size))
         
-        self.actor = self.make_actor(a_load_weight_name, scrshot_size, action_size)
+        if load_weight_name :
+            self.actor.load_weights("actor_" + load_weight_name)
+            self.critic.load_weights("critic_" + load_weight_name)
+        else :
+            self.actor = self.make_actor(scrshot_size, action_size)
+            self.critic = self.make_actor(scrshot_size, action_size)
+            
         self.actor_optimizer = optimizers.rmsprop(lr = cfg.learning_rate, decay = cfg.learning_rate_decay)
         self.actor.compile(loss = self.actor_loss, optimizer = self.actor_optimizer)
-        
-        self.critic = self.make_actor(a_load_weight_name, scrshot_size, action_size)
+
         self.critic_optimizer = optimizers.adam(lr = cfg.learning_rate, decay = cfg.learning_rate_decay)
         self.critic.compile(loss = "mse", optimizer = self.critic_optimizer)
         
-        if a_load_weight_name :
-            self.actor.load_weights("actor_" + load_weight_name)
-        if c_load_weight_name :
-            self.critic.load_weights("critic_" + load_weight_name)
-        
-    def make_actor(self, load_weight_name, scrshot_size, action_size) :
+    def make_actor(self, scrshot_size, action_size) :
         input_scrshots = Input(scrshot_size) # screen shot image
         x = Conv2D(16, (4, 4), padding = "valid", activation = "relu")(input_scrshots)
         x = MaxPooling2D((3, 3), padding = "same")(x)
@@ -34,7 +34,7 @@ class ActorCritic :
         model.summary()
         return model
     
-    def make_critic(self, load_weight_name, scrshot_size, action_size) :
+    def make_critic(self, scrshot_size, action_size) :
         input_scrshots = Input(scrshot_size) # screen shot image
         x = Conv2D(16, (4, 4), padding = "valid", activation = "relu")(input_scrshots)
         x = MaxPooling2D((3, 3), padding = "same")(x)
