@@ -8,18 +8,17 @@ class ActorCritic :
     def __init__ (self, load_weight_name, scrshot_size, action_size) :    
         self.td_error = np.zeros((cfg.train_size))
         
+        self.actor = self.make_actor(scrshot_size, action_size)
+        self.actor_optimizer = optimizers.rmsprop(lr = cfg.learning_rate, decay = cfg.learning_rate_decay)
+        self.actor.compile(loss = self.actor_loss, optimizer = self.actor_optimizer)
+        
+        self.critic = self.make_actor(scrshot_size, action_size)
+        self.critic_optimizer = optimizers.adam(lr = cfg.learning_rate, decay = cfg.learning_rate_decay)
+        self.critic.compile(loss = "mse", optimizer = self.critic_optimizer)
+        
         if load_weight_name :
             self.actor.load_weights("actor_" + load_weight_name)
             self.critic.load_weights("critic_" + load_weight_name)
-        else :
-            self.actor = self.make_actor(scrshot_size, action_size)
-            self.critic = self.make_actor(scrshot_size, action_size)
-            
-        self.actor_optimizer = optimizers.rmsprop(lr = cfg.learning_rate, decay = cfg.learning_rate_decay)
-        self.actor.compile(loss = self.actor_loss, optimizer = self.actor_optimizer)
-
-        self.critic_optimizer = optimizers.adam(lr = cfg.learning_rate, decay = cfg.learning_rate_decay)
-        self.critic.compile(loss = "mse", optimizer = self.critic_optimizer)
         
     def make_actor(self, scrshot_size, action_size) :
         input_scrshots = Input(scrshot_size) # screen shot image
