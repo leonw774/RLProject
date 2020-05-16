@@ -5,9 +5,8 @@ from time import sleep
 from keras.models import Model, load_model
 
 from configure import Configuration as cfg
+import mymodels
 from stepqueue import StepQueue
-from qnet import QNet
-from actorcritic import ActorCritic
 from gameagent import GameAgent
 import gamereward #getCurMap PixelDiffReward, TieredPixelDiffReward, MapReward
 
@@ -16,8 +15,7 @@ class DRL() :
     def __init__(self) :
         self.logfile = open("log.csv", 'w')
         self.game = GameAgent()
-        self.stuck_count = 0
-            
+        print(mymodels)
         self.A = []
         for i in range(cfg.actions_num) :
             action_onehot = np.zeros((1, cfg.actions_num))
@@ -106,14 +104,6 @@ class DRL() :
         return test_result
     # end def test
     
-    def check_stuck(self, cur_reward) :
-        if cur_reward == 0 :
-            self.stuck_count += 1 
-        elif self.stuck_count > 0 :
-            self.stuck_count -= 1
-        return self.stuck_count > cfg.stuck_thrshld
-    # end def check_stuck
-    
     def fit(self, load_weight_name = None, save_weight_name = "new_model.h5", use_target_model = cfg.use_target_model) :
         '''
         We will train model, at time t, as:
@@ -122,18 +112,22 @@ class DRL() :
         update Q's weight in mse
         after a number of steps, copy model to model_target.
         '''
+        stuck_count = 0
+        def check_stuck(cur_reward, stuck_count) :
+            if cur_reward == 0 :
+                stuck_count += 1 
+            elif stuck_count > 0 :
+                stuck_count -= 1
+            return stuck_count > cfg.stuck_thrshld
+        # end def check_stuck
 
         stepQueue = StepQueue()
         rewardFunc = getattr(gamereward, cfg.reward_func_name)()
         history = {"epoch" : [], "endmap" : [], "test_endmap" : [], "avg_reward" : []}
         
-        if cfg.use_model_name == "QNET" :
-            myModel = QNet(use_target_model, load_weight_name, cfg.model_input_shape, cfg.actions_num)
-            history["qnet_loss"] = []
-        elif cfg.use_model_name == "AC" :
-            myModel = ActorCritic(load_weight_name, cfg.model_input_shape, cfg.actions_num)
-            history["actor_loss"] = []
-            history["critic_loss"] = []
+        myModel = getattr(mymodels, cfg.use_model_name)(load_weight_name, cfg.model_input_shape, cfg.actions_num)
+        history["model_loss"] = []
+
             
         self.write_log(history.keys())
         
@@ -146,13 +140,9 @@ class DRL() :
             cur_epoch_eps = max(cfg.eps_min, cfg.epsilon * (cfg.eps_decay ** e))
             stuck_count = 0
             
-            history["epoch"].append(e)
             history["avg_reward"].append(0)
-            if cfg.use_model_name == "QNET" :
-                history["qnet_loss"].append(0)
-            elif cfg.use_model_name == "AC" :
-                history["actor_loss"].append(0)
-                history["critic_loss"].append(0)
+            history["epoch"].append(e)
+            history["model_loss"].append(list())
             
             for n in range(cfg.steps_episode) :
                 if (n + 1) % (cfg.steps_episode / 10) == 0 :
@@ -176,9 +166,7 @@ class DRL() :
                 
                 # check if stuck
                 if cfg.check_stuck :
-                    if (self.check_stuck(cur_reward)) :
-                        loss_list[e] *= float(cfg.steps_episode) / float(n)
-                        avgR_list[e] *= float(cfg.steps_episode) / float(n)
+                    if (check_stuck(cur_reward, stuck_count)) :
                         sys.stdout.write(str(n)); sys.stdout.flush()
                         break
                 
@@ -186,20 +174,18 @@ class DRL() :
                     # Experience Replay
                     random_step = np.random.randint(stepQueue.getLength() - (cfg.train_size + 1))
                     trn_s, trn_a, trn_r = stepQueue.getStepsAsArray(random_step, cfg.train_size + 1)
-                    
-                    if cfg.use_model_name == "QNET" :
-                        loss = myModel.learn(trn_s, trn_a, trn_r)
-                        history["qnet_loss"][-1] += loss / cfg.steps_episode * cfg.steps_train
-                    elif cfg.use_model_name == "AC" :
-                        aloss, closs = myModel.learn(trn_s, trn_a, trn_r)
-                        history["actor_loss"][-1] += aloss / cfg.steps_episode * cfg.steps_train
-                        history["critic_loss"][-1] += closs / cfg.steps_episode * cfg.steps_train
+                    loss = myModel.learn(trn_s, trn_a, trn_r)
+                    history["model_loss"][-1].append(loss)
+
             # end for(STEP_PER_EPOCH)
             
             # write log file and log list
             rewardFunc.clear() # only DiffReward really do clear memory, other is just a dummy
             endmap = gamereward.getCurMap(cur_shot)
             history["endmap"].append(endmap)
+            
+            history["model_loss"][-1] = tuple(np.mean(history["model_loss"][-1], axis=0))
+            
             sys.stdout.write("\n")
             for key, value in history.items() :
                 if key != "test_endmap" :
@@ -222,7 +208,6 @@ class DRL() :
                 self.drawFig(history)
             
         # end for(episodes)
-        self.drawFig(loss_list, avgR_list, endmap_list, test_endmap_list)   
     # end def fit
     
     def random_action(self, steps = cfg.steps_test) :

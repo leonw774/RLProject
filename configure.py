@@ -41,13 +41,13 @@ class Configuration() :
     noise_range = 0.008
 
     # MODEL SETTING
-    use_model_name = "AC" # "QNET"
+    use_model_name = "ActorCritic" # "QNet"
     model_input_shape = (shot_h, shot_w, shot_c)
     learning_rate = 0.001
     learning_rate_decay = 0.0
     
     # REWARD SETTING
-    reward_func_name = "PixelDiffReward"
+    reward_func_name = "DissimilarityReward"#"PixelDiffReward"
     map_path = "map/"
     map_name_list = sorted(os.listdir(map_path), key = sorting_filename_as_int)
     diff_thrshld = shot_h * shot_w * shot_c * 0.05 * ((shot_c - 1) * 0.1 + 1)
@@ -70,7 +70,7 @@ class Configuration() :
     use_target_model = False
     epsilon = 1.0
     eps_min = 0.1
-    eps_decay = 0.99
+    eps_decay = 0.95
     
     check_stuck = True
     stuck_thrshld = 100
