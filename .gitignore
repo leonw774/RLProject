@@ -108,5 +108,7 @@ venv.bak/
 *.model
 *csv
 fig/
-map_new/*.png
+map_new/
+Senior Project/
+featureDisplacementTest/
 !models/*/*.h5

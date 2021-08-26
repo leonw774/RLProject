@@ -12,17 +12,13 @@ def get_game_region(title = None) :
             raise Exception('window title not found')
         #get the bounding box of the window
         x1, y1, x2, y2 = win32gui.GetWindowRect(gamewin)
-        
         y1 += 30 # get rid of window bar
-        
         h_padding = (y2 - y1) * 0.1
         w_padding = (x2 - x1) * 0.1
-        
         y1 += h_padding
         y2 -= h_padding
         x1 += w_padding
         x2 -= w_padding
-        
         return (x1, y1, (x2 - x1 + 1), (y2 - y1 + 1))
     else :
         raise Exception("no window title was given.")
@@ -31,36 +27,31 @@ def get_game_region(title = None) :
 class Configuration() :
     
     # SCREENSHOTS SETTING
-    shot_w = 108
-    shot_h = 72
-    shot_c = 3
+    shot_w = 144
+    shot_h = 81
+    shot_c = 1
     shot_shape = (1, shot_h, shot_w, shot_c)
     shot_resize = (shot_w, shot_h)
-    shot_intv_time = 0.01
+    shot_intv_time = 0.1
     shot_wait_max = 100
     noise_range = 0.008
 
     # MODEL SETTING
-    use_model_name = "ActorCritic" # "QNet"
     model_input_shape = (shot_h, shot_w, shot_c)
-    learning_rate = 0.001
+    learning_rate = 0.01
     learning_rate_decay = 0.0
     
     # REWARD SETTING
-    reward_func_name = "DissimilarityReward"#"PixelDiffReward"
+    reward_func_names = ["PixelDiffReward", "MapReward", "FeatureDisplacementReward"]
+    reward_func_name = reward_func_names[2]
     map_path = "map/"
     map_name_list = sorted(os.listdir(map_path), key = sorting_filename_as_int)
     diff_thrshld = shot_h * shot_w * shot_c * 0.05 * ((shot_c - 1) * 0.1 + 1)
-    gamma = 0.5
+    gamma = 0.9
     base_reward = 1.0
     
-    # ACTION SETTIN
-    mouse_straight_angles = 8
-    mouse_round_angles = 4
-    actions_num = (mouse_straight_angles * 2) + (mouse_round_angles * 2)
-    # ROUND ACTION ONLY HAS CLOCKWISE BECAUSE COUNTER-CLOCKWISE IS USELESS
-    # [slow straight, fast straight, cwise round slow and fast, ccwise round slow and fast]
-    control_intv_time = 0.001
+    # ACTION SETTING
+    control_intv_time = 0.0008
     control_pause = 0.02
 
     # STEP QUEUE SETTING
@@ -68,21 +59,20 @@ class Configuration() :
 
     # TRAINING SETTING
     use_target_model = False
-    epsilon = 1.0
-    eps_min = 0.1
-    eps_decay = 0.95
+    init_epsilon = 0.95
+    epsilon_min = 0.1
+    epsilon_decay = 0.95
     
     check_stuck = True
     stuck_thrshld = 100
     
-    episodes = 10
-    steps_episode = 20
+    episodes = 10 #100
+    steps_per_episode = 100
     train_thrshld = 10
-    steps_train = 1
+    steps_per_train = 3
     train_size = 8
     
     test_intv = 5
     draw_fig_intv = 2
     
-    eps_test = 0.1
     steps_test = 100

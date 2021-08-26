@@ -8,7 +8,6 @@ class StepQueue() :
         self.scrshotList = [] 
         self.actionList = []
         self.rewardList = []
-        self.actionsOccurrence = np.zeros(cfg.actions_num)
     
     def addStep(self, scrshot, action, reward) :
         if len(self.scrshotList) + 1 == cfg.stepQueue_length_max :
@@ -21,15 +20,13 @@ class StepQueue() :
             return
         
         self.scrshotList.append(scrshot[0]) # np array
-        self.actionList.append(int(action)) # int
+        self.actionList.append(action.asarray) # np array
         self.rewardList.append(reward) # np array (QNet's out)
-        self.actionsOccurrence[action] += 1 # record occurrence of actions
     
     def clear(self) :
         self.scrshotList = [] 
         self.actionList = []
         self.rewardList = []
-        self.actionsOccurrence = np.zeros(cfg.actions_num)
         
     def getLength(self) :
         return len(self.scrshotList)
@@ -55,9 +52,6 @@ class StepQueue() :
             return np.array(self.rewardList[beg : beg + size])
         except :
             print("Out of Boundary Error")
-    
-    def getActionsOccurrence(self) :
-        return self.actionsOccurrence
     
     
         
