@@ -41,8 +41,15 @@ class GameAgent:
 
     GAME_REGION = get_game_region("Getting Over It")
     directInput = Keys()
+
+    def add_scrshot_noise(self, noisy_scrshot):
+        noisy_scrshot += np.random.uniform(low = -cfg.noise_range, high = cfg.noise_range, size = noisy_scrshot.shape)
+        noisy_scrshot[noisy_scrshot > 1.0] = 1.0
+        noisy_scrshot[noisy_scrshot < 0.0] = 0.0
+        return noisy_scrshot
+    # end def get_screen_rect
     
-    def getScreenshot(self, wait_still = True, savefile = None) :
+    def get_scrshot(self, wait_still = True, savefile = None) :
         # return screen-shot of game in np array in shape of cfg.shot_shape
         model_input_array = np.zeros(cfg.shot_shape)
         cur = screenshot(region = self.GAME_REGION).convert('RGB')
@@ -70,9 +77,9 @@ class GameAgent:
             raise Exception("shot_c isn't right.")
         if savefile : cur.save(savefile)
         return np.array(cur), model_input_array # oringal format, model input format
-    # end def getScreenshot
+    # end def get_scrshot
     
-    def doControl(self, action):
+    def control(self, action):
         #print(action)
         dx = cos(action.initial_angle)
         dy = sin(action.initial_angle)

@@ -8,7 +8,7 @@ from configure import Configuration as cfg
 from mymodels import ActorCritic
 from stepqueue import StepQueue
 from gameagent import GameAgent, Action
-import gamereward #getCurMap PixelDiffReward, TieredPixelDiffReward, MapReward
+import gamereward #get_cur_map PixelDiffReward, TieredPixelDiffReward, MapReward
 
 class DRL():
     
@@ -20,13 +20,6 @@ class DRL():
         for i in range(cd):
             print(cd - i)
             sleep(1.0)
-    
-    def addNoise(self, noisy_scrshot):
-        noisy_scrshot += np.random.uniform(low = -cfg.noise_range, high = cfg.noise_range, size = noisy_scrshot.shape)
-        noisy_scrshot[noisy_scrshot > 1.0] = 1.0
-        noisy_scrshot[noisy_scrshot < 0.0] = 0.0
-        return noisy_scrshot
-    # end def get_screen_rect
     
     def write_log(self, values):
         log_list = []
@@ -58,19 +51,19 @@ class DRL():
             if verdict : print("\nRound", i, "begin")
             # click "NEW GAME"
             self.game.newgame()
-            orig_cur_shot, input_cur_shot = self.game.getScreenshot(wait_still = False)
+            orig_cur_shot, input_cur_shot = self.game.get_scrshot(wait_still = False)
             
             for n in range(max_step):
                 cur_action = Action(np.squeeze(testActor.predict(input_cur_shot)))
                 #print(action_Q)
-                if verdict: print("Score:", gamereward.getCurMap(input_cur_shot), "\nDo action", cur_action, "with Q:", action_Q[cur_action], "\n")
+                if verdict: print("Score:", gamereward.get_cur_map(input_cur_shot), "\nDo action", cur_action, "with Q:", action_Q[cur_action], "\n")
                     
-                self.game.doControl(cur_action)
+                self.game.control(cur_action)
                 
-                orig_cur_shot, input_cur_shot = self.game.getScreenshot(wait_still = True)
+                orig_cur_shot, input_cur_shot = self.game.get_scrshot(wait_still = True)
             # end for max_step
             
-            endmap = gamereward.getCurMap(input_cur_shot)
+            endmap = gamereward.get_cur_map(input_cur_shot)
             if verdict: print("Test round", i, "ended. endmap:", endmap)
             # exit game...
             self.game.quitgame()
@@ -89,7 +82,7 @@ class DRL():
             return stuck_count > cfg.stuck_thrshld
         # end def check_stuck
 
-        stepQueue = StepQueue()
+        
         rewardFunc = getattr(gamereward, cfg.reward_func_name)()
         history = {"epoch" : [], "endmap" : [], "test_endmap" : [], "avg_reward" : []}
         
@@ -103,8 +96,7 @@ class DRL():
             self.game.newgame()
             sys.stdout.write(str(e) + ":"); sys.stdout.flush()
             
-            orig_nxt_shot, input_nxt_shot = self.game.getScreenshot(wait_still = False)
-            cur_epsilon = max(cfg.epsilon_min, cfg.init_epsilon * (cfg.epsilon_decay ** e))
+            orig_nxt_shot, input_nxt_shot = self.game.get_scrshot(wait_still = False)
             stuck_count = 0
             
             history["avg_reward"].append(0)
@@ -117,21 +109,12 @@ class DRL():
                 
                 orig_cur_shot, input_cur_shot = orig_nxt_shot, input_nxt_shot
 
-                # make action
-                if np.random.random() > cur_epsilon:
-                    cur_action = myModel.decision(input_cur_shot)
-                else:
-                    '''
-                    time: 0 ~ 1 (second)
-                    speed: 0 ~ 50
-                    '''
-                    cur_action = Action([np.random.random(), np.random.random() * 50, np.random.random(), np.random.random() * 2 - 1])
+                cur_action = myModel.decision(input_cur_shot)
+                self.game.control(cur_action)
                 
-                self.game.doControl(cur_action)
-                
-                orig_nxt_shot, input_nxt_shot = self.game.getScreenshot(wait_still = True)
-                cur_reward = rewardFunc.getReward(orig_cur_shot, orig_nxt_shot) # pre-action, after-action
-                stepQueue.addStep(input_cur_shot, cur_action, cur_reward)
+                orig_nxt_shot, input_nxt_shot = self.game.get_scrshot(wait_still = True)
+                cur_reward = rewardFunc.get_reward(orig_cur_shot, orig_nxt_shot) # pre-action, after-action
+                myModel.add_step(input_cur_shot, cur_action, cur_reward)
                 history["avg_reward"][-1] += cur_reward / cfg.steps_per_episode
                 #print(cur_action, ",", cur_reward)
                 
@@ -141,18 +124,17 @@ class DRL():
                         sys.stdout.write(str(n)); sys.stdout.flush()
                         break
                 
-                if stepQueue.getLength() > cfg.train_thrshld and n % cfg.steps_per_train == 0:
+                if len(myModel.step_queue) > cfg.train_thrshld and n % cfg.steps_per_train == 0:
                     # Experience Replay
-                    random_step = np.random.randint(stepQueue.getLength() - (cfg.train_size + 1))
-                    trn_s, trn_a, trn_r = stepQueue.getStepsAsArray(random_step, cfg.train_size + 1)
-                    loss = myModel.learn(trn_s, trn_a, trn_r)
+                    random_step = np.random.choice(len(myModel.step_queue) - (cfg.train_size + 1))
+                    loss = myModel.learn()
                     history["model_loss"][-1].append(loss)
 
             # end for(STEP_PER_EPOCH)
             
             # write log file and log list
             rewardFunc.clear()
-            endmap = gamereward.getCurMap(input_cur_shot)
+            endmap = gamereward.get_cur_map(input_cur_shot)
             history["endmap"].append(endmap)
             history["model_loss"][-1] = tuple(np.mean(history["model_loss"][-1], axis=0))
             
@@ -166,7 +148,7 @@ class DRL():
             # back to main menu
             self.game.quitgame()
             
-            if stepQueue.getLength() > cfg.train_thrshld:
+            if myModel.step_queue > cfg.train_thrshld:
                 myModel.save(save_weight_name)
                 
             if (e + 1) % cfg.test_intv == 0:

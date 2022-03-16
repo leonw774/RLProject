@@ -51,11 +51,11 @@ class Configuration() :
     base_reward = 1.0
     
     # ACTION SETTING
-    control_intv_time = 0.0008
-    control_pause = 0.02
+    # control_intv_time = 0.001
+    # control_pause = 0.1
 
     # STEP QUEUE SETTING
-    stepQueue_length_max = 500 # set 0 to be no limit
+    stepqueue_length_max = 1000 # set 0 to be no limit
 
     # TRAINING SETTING
     use_target_model = False

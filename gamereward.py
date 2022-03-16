@@ -11,7 +11,7 @@ class Reward():
     def __init__(self, base_reward, thresold):
         pass
     
-    def getReward(self, pre_scrshot, cur_scrshot):
+    def get_reward(self, pre_scrshot, cur_scrshot):
         pass
     
     def clear(self):
@@ -24,7 +24,7 @@ class PixelDiffReward():
         self.base_reward = cfg.base_reward
         self.thresold = cfg.diff_thrshld
     
-    def getReward(self, pre_scrshot, cur_scrshot):
+    def get_reward(self, pre_scrshot, cur_scrshot):
         pre_scrshot = np.squeeze(pre_scrshot) # before action
         cur_scrshot = np.squeeze(cur_scrshot) # after action
         
@@ -47,7 +47,7 @@ class PixelDiffReward():
         else:
             # -b * ((N - p) / N) * gamma
             return -self.base_reward * (len(self.memeories) - min_diff_index - 1) / len(self.memeories) * cfg.gamma
-    # end def getReward
+    # end def get_reward
     
     def clear(self):
         self.memeories = []
@@ -73,7 +73,7 @@ class TieredPixelDiffReward():
         self.thresold = thresold
         self.rev_gamma = (1 / cfg.gamma)
     
-    def getReward(self, pre_scrshot, cur_scrshot):
+    def get_reward(self, pre_scrshot, cur_scrshot):
         pre_scrshot = np.squeeze(pre_scrshot) # before action
         cur_scrshot = np.squeeze(cur_scrshot) # after action
         
@@ -115,7 +115,7 @@ class TieredPixelDiffReward():
             # r = base * s * (rg ^ |s|)
             score = self.memeories[cur_pos].tier - self.memeories[pre_pos].tier
             return self.base_reward * score * (self.rev_gamma ** abs(score))
-    # end def getReward
+    # end def get_reward
     
     def clear(self):
         self.memeories = []
@@ -133,7 +133,7 @@ def get_map_list():
         maplist.append(array_map)
     return maplist
 
-def getCurMap(scrshot):
+def get_cur_map(scrshot):
     min_diff = 2147483648
     cur_map = -1
     for this_mapnum, this_mapshot in enumerate(MAP_LIST):
@@ -142,7 +142,7 @@ def getCurMap(scrshot):
             min_diff = d
             if this_mapnum > cur_map : cur_map = this_mapnum
     return cur_map
-# end def getCurMap
+# end def get_cur_map
 
 MAP_LIST = get_map_list()
     
@@ -156,7 +156,7 @@ class MapReward():
         #print("decline_rate:", self.decline_rate)
     # end __init__
         
-    def getReward(self, pre_scrshot, cur_scrshot):
+    def get_reward(self, pre_scrshot, cur_scrshot):
         pre_scrshot = np.squeeze(pre_scrshot) # before action
         cur_scrshot = np.squeeze(cur_scrshot) # after action
         
@@ -193,7 +193,7 @@ class MapReward():
 class FeatureDisplacementReward():
     def __init__(self):
         self.memeories = []
-        self.rewardMax = cfg.shot_h * cfg.shot_h + cfg.shot_w * cfg.shot_w
+        self.fdMax = cfg.shot_h * cfg.shot_h + cfg.shot_w * cfg.shot_w
         self.extractor = BRIEF()
     
     def median_outlier_filter(self, signal, threshold=3):
@@ -205,7 +205,7 @@ class FeatureDisplacementReward():
         signal[mask] = np.median(signal)
         return signal
     
-    def getFeatureDisplacement(self, img1, img2):
+    def get_feature_displacment(self, img1, img2):
 
         # if cfg.shot_c == 3:
         #     img1 = rgb2gray(img1)
@@ -229,30 +229,29 @@ class FeatureDisplacementReward():
         dist = np.sum((keypoints1[matches[:,0]] - keypoints2[matches[:,1]]) ** 2, axis = 1)
         return np.mean(self.median_outlier_filter(dist))
 
-    def getReward(self, pre_scrshot, cur_scrshot):
-        pre_scrshot = np.squeeze(pre_scrshot) # before action
+    def get_reward(self, pre_scrshot, cur_scrshot):
+        # pre_scrshot = np.squeeze(pre_scrshot) # before action
         cur_scrshot = np.squeeze(cur_scrshot) # after action
 
-        pre_scrshot = (pre_scrshot*255).astype(dtype=int)
+        # pre_scrshot = (pre_scrshot*255).astype(dtype=int)
         cur_scrshot = (cur_scrshot*255).astype(dtype=int)
 
-        min_mem_fd = self.rewardMax
-        for mem_shot in self.memeories:
-            fd = self.getFeatureDisplacement(cur_scrshot, mem_shot)
-            if fd: min_mem_fd = min(fd, min_mem_fd)
-        cur_fd = self.getFeatureDisplacement(cur_scrshot, pre_scrshot)
-        if cur_fd:
-            if cur_fd > min_mem_fd: # if cur_shot is farer than closest mem_shot
-                self.memeories.append(cur_scrshot)
-                return cfg.base_reward * cur_fd / self.rewardMax
-            else:
-                return 0
-        else: # cur_scrshot & cur_scrshot have no similar features at all
-            if min_mem_fd >= self.rewardMax * 0.99: # even no similar features to memories
-                self.memeories.append(cur_scrshot)
-                return 1
-            else:
-                return 0
+        min_mem_fd = self.fdMax
+        min_mem_id = -1
+        for id, mem_shot in enumerate(self.memeories):
+            fd = self.get_feature_displacment(cur_scrshot, mem_shot)
+            if fd:
+                min_mem_fd = min(fd, min_mem_fd)
+                min_mem_id = id
+        if min_mem_id == len(self.memeories) - 1: # if cur_shot is closer to last memory position
+            self.memeories.append(cur_scrshot)
+            return cfg.base_reward * min_mem_fd / self.fdMax
+        elif min_mem_id > 0: # cur_shot is closer to older memory position
+            return 0
+        else: # cur_scrshot & cur_scrshot have no similar features to memories at all
+            self.memeories.append(cur_scrshot)
+            cfg.base_reward
+
 
     def clear(self):
         self.memeories = []

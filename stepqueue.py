@@ -9,7 +9,7 @@ class StepQueue() :
         self.actionList = []
         self.rewardList = []
     
-    def addStep(self, scrshot, action, reward) :
+    def add_step(self, scrshot, action, reward) :
         if len(self.scrshotList) + 1 == cfg.stepQueue_length_max :
             self.scrshotList.pop(0)
             self.actionList.pop(0)
@@ -27,31 +27,12 @@ class StepQueue() :
         self.scrshotList = [] 
         self.actionList = []
         self.rewardList = []
-        
-    def getLength(self) :
+    
+    def __len__(self) :
         return len(self.scrshotList)
     
-    def getStepsAsArray(self, beg, size = 1) :
+    def get_steps(self, beg, size = 1) :
         to = beg + size
         return np.array(self.scrshotList[beg:to]), np.array(self.actionList[beg:to]), np.array(self.rewardList[beg:to])
-        
-    def getShotsAsArray(self, beg, size = 1) :
-        try :
-            return np.array(self.scrshotList[beg : beg + size])
-        except :
-            print("Out of Boundary Error")
-    
-    def getActionAsArray(self, beg, size = 1) :
-        try :
-            return np.array(self.actionList[beg : beg + size])
-        except :
-            print("Out of Boundary Error")
-    
-    def getRewardAsArray(self, beg, size = 1) :
-        try :
-            return np.array(self.rewardList[beg : beg + size])
-        except :
-            print("Out of Boundary Error")
-    
     
         
